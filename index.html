@@ -61,28 +61,49 @@
         .c-bl{ bottom:20px; left:20px; border-width:0 0 2px 2px; }
         .c-br{ bottom:20px; right:20px; border-width:0 2px 2px 0; }
 
-        #namecard{ position:absolute; top:30px; left:26px; max-width:60vw; }
-        .nc-name{ font-family:'Cormorant Garamond',serif; font-size:clamp(20px,5vw,26px); font-weight:700; color:#fff; letter-spacing:4px; text-shadow:0 0 24px var(--pg); transition: text-shadow 0.5s; }
-        .nc-role{ font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--p); letter-spacing:5px; margin-top:6px; font-weight:bold; transition: color 0.5s; }
-        .nc-sep{ width:120px; height:2px; background:linear-gradient(90deg,var(--p),transparent); margin:10px 0; opacity:0.5; transition: background 0.5s; }
-        .nc-data{ font-family:'Share Tech Mono',monospace; font-size:9px; color:#ffffff88; line-height:2; letter-spacing:1px; }
-        .nc-data b{ color:#ffffff; }
-
-        /* Akció gombok a HUD-on belül */
-        .action-btns { display: flex; gap: 10px; margin-top: 12px; pointer-events: auto; }
-        .act-btn {
-            font-family: 'Share Tech Mono', monospace; font-size: 9px; font-weight: bold; letter-spacing: 2px;
-            padding: 8px 12px; border: 1px solid var(--p); background: var(--pb);
-            color: var(--p); cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;
-            clip-path: polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
-            transition: all 0.3s; text-shadow: 0 0 8px var(--pg);
+        /* KIEMELT NÉVJEGY PANEL (Új, jobban olvasható stílus) */
+        #namecard{ 
+            position:absolute; top:30px; left:26px; max-width:80vw; 
+            background: linear-gradient(135deg, rgba(0,4,15,0.85) 0%, rgba(0,2,8,0.7) 100%);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border-left: 3px solid var(--p);
+            padding: 24px 28px;
+            border-radius: 4px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6), inset 0 0 15px rgba(255,255,255,0.03);
+            pointer-events: auto; /* Mindig kattintható legyen */
+            transition: border-color 0.5s;
         }
-        .act-btn:active { background: var(--p); color: #000; transform: scale(0.95); text-shadow: none; }
+        .nc-name{ font-family:'Cormorant Garamond',serif; font-size:clamp(22px,6vw,30px); font-weight:700; color:#fff; letter-spacing:4px; text-shadow:0 0 20px var(--pg); transition: text-shadow 0.5s; }
+        .nc-role{ font-family:'Share Tech Mono',monospace; font-size:12px; color:var(--p); letter-spacing:5px; margin-top:8px; font-weight:bold; transition: color 0.5s; }
+        .nc-sep{ width:100%; height:1px; background:linear-gradient(90deg,var(--p),transparent); margin:14px 0; opacity:0.6; transition: background 0.5s; }
+        .nc-data{ font-family:'Share Tech Mono',monospace; font-size:11px; color:#ffffffcc; line-height:2.2; letter-spacing:1.5px; }
+        .nc-data b{ color:#ffffff; font-weight: bold; }
+
+        /* Akció gombok felújítva: nagyobbak, kontrasztosabbak */
+        .action-btns { display: flex; gap: 14px; margin-top: 20px; flex-wrap: wrap; pointer-events: auto; }
+        .act-btn {
+            font-family: 'Share Tech Mono', monospace; font-size: 11px; font-weight: bold; letter-spacing: 2px;
+            padding: 14px 20px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;
+            clip-path: polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+            transition: all 0.3s;
+        }
+        
+        .act-btn-primary {
+            background: var(--p); color: #000; border: none; 
+            box-shadow: 0 0 20px var(--pg);
+        }
+        .act-btn-primary:active { transform: scale(0.95); background: #fff; box-shadow: 0 0 30px #fff; color: #000; }
+        
+        .act-btn-secondary {
+            background: rgba(0,0,0,0.6); color: var(--p); border: 1px solid var(--p);
+        }
+        .act-btn-secondary:active { transform: scale(0.95); background: var(--p); color: #000; }
+
 
         #statusbox{ position:absolute; top:30px; right:26px; text-align:right; }
         .sb-r{ font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:3px; color:#ffffff66; margin-bottom:6px; }
         .sb-r b{ color:var(--p); opacity:0.9; transition: color 0.5s; }
-        #adapt-status { font-family:'Share Tech Mono',monospace; font-size:8px; color:var(--p); opacity: 0.6; letter-spacing:2px; transition: color 0.5s; }
+        #adapt-status { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--p); opacity: 0.8; letter-spacing:2px; transition: color 0.5s; }
 
         #build-ui{ position:absolute; bottom:150px; left:50%; transform:translateX(-50%); width:280px; text-align:center; transition:opacity 0.8s, transform 0.8s; }
         #build-ui.gone{ opacity:0; pointer-events:none; transform:translate(-50%, 15px); }
@@ -206,27 +227,30 @@
     <div class="corner c-tl"></div><div class="corner c-tr"></div>
     <div class="corner c-bl"></div><div class="corner c-br"></div>
 
+    <!-- KIEMELT ÉS OLVASHATÓ NÉVJEGY -->
     <div id="namecard">
         <div class="nc-name">KOVÁCS AI-GÁBOR</div>
         <div class="nc-role">LEAD AI ENGINEER  ·  NEURAL ARCHITECT</div>
         <div class="nc-sep"></div>
         <div class="nc-data">
-            <b>ai@kovacs.dev</b>  ·  +36 XX XXX XXXX<br>
-            github.com/kovacs-ai  ·  Budapest, HU
+            <b>ai@kovacs.dev</b><br>
+            +36 XX XXX XXXX<br>
+            github.com/kovacs-ai
         </div>
         
-        <!-- Új Interaktív Akció Gombok -->
+        <!-- Fókuszált Gombok -->
         <div class="action-btns">
-            <!-- Példa Calendly link (cseréld le a sajátodra) -->
-            <a href="https://calendly.com/" target="_blank" class="act-btn">📅 IDŐPONT</a>
-            <button id="btn-contact" class="act-btn" onclick="saveContact()">👤 NÉVJEGY MENTÉSE</button>
+            <!-- Elsődleges gomb, feltűnő színnel -->
+            <button id="btn-contact" class="act-btn act-btn-primary" onclick="saveContact()">👤 NÉVJEGY MENTÉSE</button>
+            <!-- Másodlagos gomb Calendly linkhez -->
+            <a href="https://calendly.com/" target="_blank" class="act-btn act-btn-secondary">📅 IDŐPONT</a>
         </div>
     </div>
 
     <div id="statusbox">
         <div class="sb-r">AR <b>AKTÍV</b></div>
         <div class="sb-r" id="sb-clock">--:--</div>
-        <div id="adapt-status">ENV_SYNC</div>
+        <div id="adapt-status">NAPPALI_MÓD</div>
     </div>
 
     <div id="build-ui">
@@ -271,7 +295,7 @@
 
 <!-- Splash -->
 <div id="splash">
-    <div class="sp-eyebrow">A R   P O R T F Ó L I Ó</div>
+    <div class="sp-eyebrow">A R   P O R T F Ó L I CREATOR</div>
     <div class="sp-name">RESEARCH<br>TOWER<em>KOVÁCS AI-GÁBOR</em></div>
     <div class="sp-divider"></div>
     <button id="start-btn" onclick="startAR()">TORONY MEGÉPÍTÉSE</button>
@@ -323,7 +347,7 @@ let towerGroup, floorGroups=[];
 let buildPhase='idle';
 let selectedFloor=-1, panelOpen=false;
 
-// Új: "Data Burst" Animációs változó
+// Névjegy Mentése "Data Burst" Animáció
 let pulseAnim = 0; 
 
 // Kamera
@@ -333,9 +357,9 @@ let touchX=0, touchY=0, touchMoved=false;
 // Világítás referenciák
 let keyLight, fillLight;
 
-// Adaptív Analitika (Valós idejű Fény és Szín illesztés)
+// Adaptív Analitika
 let sampleCanvas, sampleCtx, lastSample=0;
-let envBright = 0.5, targetBright = 0.5; // Fényesség: 0 (nagyon sötét) -> 1 (nagyon világos)
+let envBright = 0.5, targetBright = 0.5; // Fényesség
 let currentEnvColor = new THREE.Color(0x00cfff); 
 let targetEnvColor = new THREE.Color(0x00cfff);
 
@@ -351,7 +375,6 @@ async function startAR(){
         const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
         document.getElementById('camera-bg').srcObject=stream;
 
-        // Háttér elemző vászon inicializálása
         sampleCanvas=document.createElement('canvas');
         sampleCanvas.width=64; sampleCanvas.height=36;
         sampleCtx=sampleCanvas.getContext('2d',{willReadFrequently:true});
@@ -376,7 +399,6 @@ async function startAR(){
 // NÉVJEGY LETÖLTÉS (vCard)
 // ════════════════════════════════════════════════════════════
 function saveContact() {
-    // 1. vCard (.vcf) Fájl generálása
     const vcardData = `BEGIN:VCARD
 VERSION:3.0
 FN:Kovács AI-Gábor
@@ -391,7 +413,6 @@ END:VCARD`;
     const blob = new Blob([vcardData], { type: 'text/vcard' });
     const url = URL.createObjectURL(blob);
     
-    // Láthatatlan letöltő link létrehozása és aktiválása
     const a = document.createElement('a');
     a.href = url;
     a.download = 'Kovacs_AI_Gabor.vcf';
@@ -400,11 +421,10 @@ END:VCARD`;
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    // 2. Ui Gomb Vizuális Visszajelzés
     const btn = document.getElementById('btn-contact');
     const originalText = btn.innerHTML;
-    btn.innerHTML = "✓ SIKERES MENTÉS";
-    btn.style.background = "var(--p)";
+    btn.innerHTML = "✓ MENTVE";
+    btn.style.background = "#ffffff";
     btn.style.color = "#000";
     setTimeout(() => {
         btn.innerHTML = originalText;
@@ -412,7 +432,7 @@ END:VCARD`;
         btn.style.color = "";
     }, 2500);
 
-    // 3. Torony "Data Burst" Animáció elindítása
+    // Animáció indítása
     pulseAnim = 1.0; 
 }
 
@@ -424,38 +444,32 @@ function analyzeBackground(){
     const video=document.getElementById('camera-bg');
     if(video.readyState !== video.HAVE_ENOUGH_DATA || !sampleCtx) return;
     
-    // Leképzünk egy pici, homályosított verziót a videóból
     sampleCtx.drawImage(video,0,0,64,36);
     const data=sampleCtx.getImageData(0,0,64,36).data;
     
     let r=0,g=0,b=0, count=0;
-    // Csak minden 16. pixelt nézzük a gyorsaságért
     for(let i=0;i<data.length;i+=16){ 
         r+=data[i]; g+=data[i+1]; b+=data[i+2]; count++; 
     }
     r/=count; g/=count; b/=count;
     
-    // Fényesség (Luminance) számítása
     targetBright = (0.299*r + 0.587*g + 0.114*b) / 255;
     
-    // Domináns Szín kinyerése
     const hsl = {};
     new THREE.Color(r/255, g/255, b/255).getHSL(hsl);
     
-    // Ha a szoba nem teljesen szürke/fekete, kiemeljük a színét
     if (hsl.s > 0.05 && targetBright > 0.05) {
-        // Megnöveljük a szaturációt a cyberpunk hatásért
         targetEnvColor.setHSL(hsl.h, Math.min(hsl.s * 2.0, 0.9), 0.5); 
     } else {
-        targetEnvColor.setHex(0x00cfff); // Vissza az alapértelmezett kékre
+        targetEnvColor.setHex(0x00cfff); 
     }
 
-    // UI Szöveg frissítése a menüben
     const as = document.getElementById('adapt-status');
     if(as) {
-        if(targetBright < 0.3) as.textContent = "NIGHT_MODE_ACTIVE";
-        else if (targetBright > 0.7) as.textContent = "DAYLIGHT_SYNC";
-        else as.textContent = "ENV_SYNC_NORMAL";
+        // Logika a HUD kijelzőhöz
+        if(targetBright < 0.45) as.textContent = "ÉJSZAKAI VILÁGÍTÁS_ON";
+        else if (targetBright > 0.7) as.textContent = "NAPPALI_MÓD";
+        else as.textContent = "KÖRNYEZET_SZINKRON";
     }
 }
 
@@ -497,7 +511,6 @@ function initThree(){
     rimLight.position.set(5, 3, -6); 
     scene.add(rimLight);
 
-    // Az alsó derítő fény színét majd a környezet határozza meg!
     fillLight = new THREE.PointLight(0x00cfff, 1.2, 15);
     fillLight.position.set(0, BASE_Y + 1, 4);
     scene.add(fillLight);
@@ -598,14 +611,23 @@ function buildCinematicFloors(){
         strip.position.y = -actualFH/2 - gap/2;
         group.add(strip);
 
+        // ABLAKFÉNYEK (Okos Világítás Hozzáadva)
         const lightGroup = new THREE.Group();
-        for(let l=0; l<12; l++){
+        for(let l=0; l<18; l++){ // Megnövelt lámpaszám a jobb hatásért
             const lGeo = new THREE.BoxGeometry(0.04, 0.02, 0.02);
-            const lMat = new THREE.MeshBasicMaterial({color: 0xffffff, transparent:true, opacity: 0.6 + Math.random()*0.4});
+            // Meleg "irodai" sárgás-fehér szín
+            const lMat = new THREE.MeshBasicMaterial({color: 0xffeebb, transparent:true, opacity: 0});
             const light = new THREE.Mesh(lGeo, lMat);
             const a = Math.random() * Math.PI * 2;
             light.position.set(Math.cos(a)*glassRadius, (Math.random()-0.5)*actualFH*0.8, Math.sin(a)*glassRadius);
             light.rotation.y = -a;
+            
+            // Eltároljuk a fázist a vibráláshoz és az aktuális átlátszóságot
+            light.userData = { 
+                currentOpacity: 0, 
+                phase: Math.random() * Math.PI * 2, 
+                speed: 1 + Math.random() * 2 
+            };
             lightGroup.add(light);
         }
         group.add(lightGroup);
@@ -819,6 +841,11 @@ function animate(){
     const invBright = Math.max(0.1, 1.0 - envBright);
     const glowFactor = 0.01 + (invBright * 0.15); 
     const glassOp = 0.6 + (envBright * 0.35); 
+
+    // ---- OKOS VILÁGÍTÁS LOGIKA ----
+    // Ha a kamera sötétet lát (envBright alacsony), felkapcsolnak a lámpák
+    const isDarkEnvironment = envBright < 0.45;
+    const targetLightOpacity = isDarkEnvironment ? 0.85 : 0.0;
     
     // Névjegy Mentése Animáció (Data Burst Effect)
     let burstRotation = 0;
@@ -826,12 +853,12 @@ function animate(){
     let burstGlow = 0;
     
     if (pulseAnim > 0) {
-        pulseAnim -= 0.015; // Szép lassan halványul el az effekt
+        pulseAnim -= 0.015; 
         if (pulseAnim < 0) pulseAnim = 0;
         
-        burstRotation = pulseAnim * 2.0; // Pörgés
-        burstScale = 1.0 + (pulseAnim * 0.15); // Enyhe növekedés
-        burstGlow = pulseAnim * 4.0; // Erős felvillanás
+        burstRotation = pulseAnim * 2.0; 
+        burstScale = 1.0 + (pulseAnim * 0.15); 
+        burstGlow = pulseAnim * 4.0; 
     }
 
     // Kamera interpoláció
@@ -870,15 +897,26 @@ function animate(){
         fm.group.scale.set(fm.exScale, 1, fm.exScale);
         fm.group.position.y = baseY + fm.exY;
         
-        fm.lightGroup.children.forEach((light, lIdx) => {
-            light.material.opacity = (isSel ? 1.0 : (0.2 + invBright*0.6)) + Math.sin(t * (2+lIdx%3) + lIdx) * 0.3;
+        // Ablakfények animációja (Okos lámpák)
+        fm.lightGroup.children.forEach((light) => {
+            const ud = light.userData;
+            // Lágy felkapcsolás/lekapcsolás
+            ud.currentOpacity += (targetLightOpacity - ud.currentOpacity) * 0.05;
+            
+            // Ha látszik a fény, adjunk neki egy kis vibrálást
+            let flicker = 0;
+            if(ud.currentOpacity > 0.1) {
+                flicker = Math.sin(t * ud.speed * 3 + ud.phase) * 0.25;
+            }
+            
+            light.material.opacity = isSel ? 1.0 : Math.max(0, ud.currentOpacity + flicker);
         });
     });
 
     if(towerGroup) {
-        towerGroup.position.y = Math.sin(t*0.5)*0.05 + (pulseAnim * 0.1); // Torony felugrik kicsit
-        towerGroup.rotation.y = burstRotation; // Torony megpördül
-        towerGroup.scale.set(burstScale, burstScale, burstScale); // Torony kitágul
+        towerGroup.position.y = Math.sin(t*0.5)*0.05 + (pulseAnim * 0.1); 
+        towerGroup.rotation.y = burstRotation; 
+        towerGroup.scale.set(burstScale, burstScale, burstScale); 
     }
 
     renderer.render(scene,camera);
