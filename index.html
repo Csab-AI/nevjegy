@@ -144,6 +144,7 @@
         <div class="stat">AR <b>AKTÍV</b></div>
         <div class="stat">CAM <b>HÁTSÓ</b></div>
         <div class="stat" id="clock">--:--</div>
+        <div class="stat" id="adapt-mode" style="transition:color 1s ease;">CYBER MODE</div>
         <div class="dot"></div>
     </div>
     <div id="info-panel">
@@ -187,6 +188,12 @@ async function startAR() {
         });
         const video = document.getElementById('camera-bg');
         video.srcObject = stream;
+
+        // Háttérelemző canvas
+        window._sampleCanvas = document.createElement('canvas');
+        window._sampleCanvas.width = 64;
+        window._sampleCanvas.height = 36;
+        window._sampleCtx = window._sampleCanvas.getContext('2d', {willReadFrequently: true});
 
         setupGyro();
         initThree();
@@ -258,6 +265,10 @@ function buildHologram() {
     r3.rotation.y = Math.PI*0.3;
 
     ringGroup.add(r1, r2, r3);
+    // Regisztráció adaptív rendszerbe
+    window._adaptMats.push({mat: r1.material, role:'primary'});
+    window._adaptMats.push({mat: r2.material, role:'secondary'});
+    window._adaptMats.push({mat: r3.material, role:'accent'});
 
     // Tick jelek
     for (let i=0; i<24; i++) {
@@ -277,10 +288,9 @@ function buildHologram() {
         new THREE.MeshPhongMaterial({ color: 0x000d1a, emissive: 0x000510, transparent: true, opacity: 0.75, shininess: 200 })
     ));
 
-    hologramGroup.add(new THREE.LineSegments(
-        new THREE.EdgesGeometry(new THREE.BoxGeometry(3.32, 1.92, 0.045)),
-        new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.9 })
-    ));
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.9 });
+    hologramGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(3.32, 1.92, 0.045)), edgeMat));
+    window._adaptMats.push({mat: edgeMat, role:'primary'});
 
     hologramGroup.add(new THREE.Line(
         new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.5, 0.28, 0.026), new THREE.Vector3(1.5, 0.28, 0.026)]),
@@ -345,14 +355,17 @@ function buildHologram() {
     const sp = new THREE.Mesh(new THREE.SphereGeometry(0.36,32,32),
         new THREE.MeshPhongMaterial({ color:0x00ffcc, emissive:0x00ffcc, emissiveIntensity:0.35, transparent:true, opacity:0.18, shininess:300 }));
     sp.position.set(0,1.62,0); sp.name='sp'; hologramGroup.add(sp);
+    window._adaptMats.push({mat: sp.material, role:'primary'});
 
     const sw = new THREE.Mesh(new THREE.SphereGeometry(0.37,16,16),
         new THREE.MeshBasicMaterial({ color:0x00ffcc, wireframe:true, transparent:true, opacity:0.32 }));
     sw.position.copy(sp.position); sw.name='sw'; hologramGroup.add(sw);
+    window._adaptMats.push({mat: sw.material, role:'primary'});
 
     const ic = new THREE.Mesh(new THREE.IcosahedronGeometry(0.52,0),
         new THREE.MeshBasicMaterial({ color:0x8a2be2, wireframe:true, transparent:true, opacity:0.42 }));
     ic.position.copy(sp.position); ic.name='si'; hologramGroup.add(ic);
+    window._adaptMats.push({mat: ic.material, role:'secondary'});
 
     // ── Skill bárok ──
     [0.92,0.88,0.95,0.80,0.97].forEach((v,i) => {
@@ -364,6 +377,7 @@ function buildHologram() {
         );
         bar.position.set(-1.05+i*0.53, -1.4-h2/2, 0.027); bar.name=`br${i}`;
         hologramGroup.add(bar);
+        window._adaptMats.push({mat: bar.material, role: i%2===0?'primary':'secondary'});
     });
 }
 
@@ -390,10 +404,99 @@ function buildParticles() {
     scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ size:0.045, vertexColors:true, transparent:true, opacity:0.6, sizeAttenuation:true })));
 }
 
+// ── ADAPTÍV SZÍN ELEMZÉS ──
+window._lastSample = 0;
+window._adaptMats = [];  // [{mat, role}] ahol role: 'primary'|'secondary'|'accent'
+
+function analyzeAndApply() {
+    const video = document.getElementById('camera-bg');
+    if (!video.videoWidth || !window._sampleCtx) return;
+
+    window._sampleCtx.drawImage(video, 0, 0, 64, 36);
+    const data = window._sampleCtx.getImageData(16, 8, 32, 20).data;
+
+    let r=0,g=0,b=0,n=0;
+    for(let i=0;i<data.length;i+=4){ r+=data[i]; g+=data[i+1]; b+=data[i+2]; n++; }
+    const rA=r/n/255, gA=g/n/255, bA=b/n/255;
+    const brightness = 0.299*rA + 0.587*gA + 0.114*bA;
+    const warmth = rA - bA;
+    const maxC=Math.max(rA,gA,bA), minC=Math.min(rA,gA,bA);
+    const sat = maxC>0.01 ? (maxC-minC)/maxC : 0;
+
+    let pHex, sHex, aHex, modeTxt;
+
+    if (brightness > 0.68) {
+        // Világos háttér → sötét, telített
+        pHex='#0077ff'; sHex='#cc00ff'; aHex='#ff4400'; modeTxt='DARK';
+    } else if (brightness < 0.20) {
+        // Sötét háttér → élénk neon
+        pHex='#00ffdd'; sHex='#ff44ff'; aHex='#ffdd00'; modeTxt='NEON';
+    } else if (warmth > 0.15) {
+        // Meleg háttér (fa, tégla) → hideg kék/cyan
+        pHex='#00ddff'; sHex='#0044ff'; aHex='#00ffaa'; modeTxt='COOL';
+    } else if (warmth < -0.12) {
+        // Hideg háttér (kék fal, ég) → meleg arany
+        pHex='#ffaa00'; sHex='#ff6600'; aHex='#ffee33'; modeTxt='WARM';
+    } else if (sat < 0.12) {
+        // Szürke/semleges → eredeti cyberpunk
+        pHex='#00ffcc'; sHex='#8a2be2'; aHex='#ff0055'; modeTxt='CYBER';
+    } else {
+        // Vegyes → komplementer
+        const hue = ((Math.atan2(Math.sqrt(3)*(gA-bA), 2*rA-gA-bA)*180/Math.PI)+360)%360;
+        const ch = (hue+180)%360;
+        pHex='hsl('+ch+',100%,58%)';
+        sHex='hsl('+((ch+70)%360)+',80%,52%)';
+        aHex='hsl('+((ch+140)%360)+',100%,62%)';
+        modeTxt='AUTO';
+    }
+
+    const pC = new THREE.Color(pHex);
+    const sC = new THREE.Color(sHex);
+    const aC = new THREE.Color(aHex);
+
+    window._adaptMats.forEach(({mat, role}) => {
+        const target = role==='primary' ? pC : role==='secondary' ? sC : aC;
+        if (mat.color) {
+            mat.color.r += (target.r - mat.color.r)*0.06;
+            mat.color.g += (target.g - mat.color.g)*0.06;
+            mat.color.b += (target.b - mat.color.b)*0.06;
+        }
+        if (mat.emissive) {
+            mat.emissive.r += (target.r - mat.emissive.r)*0.06;
+            mat.emissive.g += (target.g - mat.emissive.g)*0.06;
+            mat.emissive.b += (target.b - mat.emissive.b)*0.06;
+        }
+    });
+
+    // HUD CSS frissítés
+    const hex = '#'+pC.getHexString();
+    const shex = '#'+sC.getHexString();
+    const ahex = '#'+aC.getHexString();
+    document.querySelectorAll('.corner').forEach(el => el.style.borderColor=hex);
+    document.getElementById('scanline').style.background='linear-gradient(90deg,transparent,'+hex+',transparent)';
+    document.getElementById('scanline').style.boxShadow='0 0 8px '+hex;
+    document.querySelectorAll('.dot').forEach(el => { el.style.background=hex; el.style.boxShadow='0 0 6px '+hex; });
+    document.querySelectorAll('.stat b').forEach(el => el.style.color=hex);
+    document.getElementById('btn-cyan').style.color=hex;
+    document.getElementById('btn-cyan').style.borderColor=hex+'55';
+    document.getElementById('btn-purple').style.color=shex;
+    document.getElementById('btn-purple').style.borderColor=shex+'55';
+    document.getElementById('btn-red').style.color=ahex;
+    document.getElementById('btn-red').style.borderColor=ahex+'55';
+    const modeEl = document.getElementById('adapt-mode');
+    if(modeEl){ modeEl.textContent=modeTxt+' MODE'; modeEl.style.color=hex; }
+}
+
 // ── ANIMÁCIÓ ──
 function animate() {
     requestAnimationFrame(animate);
     const t = Date.now()*0.001;
+
+    // Adaptív szín ~8x/mp
+    if (t - window._lastSample > 0.125) {
+        window._lastSample = t;
+        analyzeAndApply();
+    }
 
     currentRotX += (targetRotX-currentRotX)*0.07;
     currentRotY += (targetRotY-currentRotY)*0.07;
