@@ -51,37 +51,35 @@
         .c-bl{ bottom:15px; left:15px; border-width:0 0 2px 2px; }
         .c-br{ bottom:15px; right:15px; border-width:0 2px 2px 0; }
 
-        /* ── NÉVJEGYKÁRTYA & KERESŐ ── */
+        /* ── KOMPAKT NÉVJEGYKÁRTYA ── */
         #namecard{ 
-            position:absolute; top:25px; left:25px; 
-            width: 340px; max-width: calc(100vw - 50px); 
+            position:absolute; top:20px; left:20px; 
+            width: 300px; max-width: calc(100vw - 40px); 
             background: linear-gradient(135deg, rgba(0,4,15,0.65) 0%, rgba(0,2,8,0.45) 100%);
             backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.05); border-left: 4px solid var(--p); border-radius: 8px; 
-            padding: 18px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); pointer-events: auto; transition: border-color 0.5s;
+            padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); pointer-events: auto; transition: border-color 0.5s;
         }
-        .nc-name{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:700; color:#fff; letter-spacing:2px; text-shadow:0 0 15px var(--pg); margin-bottom: 2px; }
-        .nc-role{ font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--p); letter-spacing:3px; font-weight:bold; }
-        .nc-sep{ width:100%; height:1px; background:linear-gradient(90deg,var(--p),transparent); margin:10px 0; opacity:0.4; }
-        .nc-data{ font-family:'Share Tech Mono',monospace; font-size:9px; color:#ffffffaa; line-height:1.8; letter-spacing:1px; display: flex; justify-content: space-between; align-items: flex-end;}
+        .nc-name{ font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:700; color:#fff; letter-spacing:2px; text-shadow:0 0 15px var(--pg); margin-bottom: 2px; }
+        .nc-role{ font-family:'Share Tech Mono',monospace; font-size:8px; color:var(--p); letter-spacing:3px; font-weight:bold; }
+        .nc-sep{ width:100%; height:1px; background:linear-gradient(90deg,var(--p),transparent); margin:8px 0; opacity:0.4; }
+        .nc-data{ font-family:'Share Tech Mono',monospace; font-size:8px; color:#ffffffaa; line-height:1.6; letter-spacing:1px; display: flex; justify-content: space-between; align-items: flex-end;}
         .nc-data b{ color:#ffffff; font-weight: 600; }
 
         /* Szemantikus Kereső */
-        .search-box {
-            margin-top: 12px; position: relative;
-        }
+        .search-box { margin-top: 10px; position: relative; }
         .search-box input {
             width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
-            padding: 8px 12px; color: #fff; font-family: 'Share Tech Mono', monospace; font-size: 10px;
+            padding: 6px 10px; color: #fff; font-family: 'Share Tech Mono', monospace; font-size: 9px;
             outline: none; transition: all 0.3s;
         }
         .search-box input:focus { border-color: var(--p); box-shadow: 0 0 10px var(--pg); }
-        .search-box::after { content: '🔍'; position: absolute; right: 10px; top: 8px; font-size: 10px; opacity: 0.5; }
+        .search-box::after { content: '🔍'; position: absolute; right: 10px; top: 6px; font-size: 9px; opacity: 0.5; }
 
-        .action-btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .action-btns { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
         .act-btn {
-            font-family: 'Share Tech Mono', monospace; font-size: 9px; font-weight: bold; letter-spacing: 1px;
-            padding: 10px 6px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;
+            font-family: 'Share Tech Mono', monospace; font-size: 8px; font-weight: bold; letter-spacing: 1px;
+            padding: 8px 6px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;
             border-radius: 4px; transition: all 0.2s; flex: 1; text-align: center; white-space: nowrap;
         }
         .act-btn-primary { background: var(--p); color: #000; border: none; box-shadow: 0 0 10px var(--pg); }
@@ -89,12 +87,16 @@
         .act-btn-secondary { background: rgba(0,0,0,0.5); color: var(--p); border: 1px solid var(--p); }
         .act-btn-secondary:active { transform: scale(0.95); background: var(--p); color: #000; }
 
-        /* Státusz a jobb felső sarokban */
-        #statusbox{ position:absolute; top:25px; right:25px; text-align:right; }
-        .sb-r{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px; color:#ffffff66; margin-bottom:4px; }
+        /* ── STÁTUSZ PANEL (Jobb alsó sarokba mozgatva!) ── */
+        #statusbox{ 
+            position:absolute; bottom:25px; right:25px; 
+            text-align:right; display:flex; flex-direction:column; gap:2px; 
+            z-index: 15; transition: opacity 0.4s ease;
+        }
+        .sb-r{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px; color:#ffffff66; margin-bottom:2px; }
         .sb-r b{ color:var(--p); opacity:0.9; }
-        #weather-status { font-family:'Share Tech Mono',monospace; font-size:8px; color:#00ffaa; opacity: 0.8; letter-spacing:1px; margin-top: 4px; text-shadow: 0 0 5px #00ffaa;}
-        #adapt-status { font-family:'Share Tech Mono',monospace; font-size:8px; color:var(--p); opacity: 0.7; letter-spacing:1px; margin-top: 4px; }
+        #weather-status { font-family:'Share Tech Mono',monospace; font-size:8px; color:#00ffaa; opacity: 0.8; letter-spacing:1px; text-shadow: 0 0 5px #00ffaa;}
+        #adapt-status { font-family:'Share Tech Mono',monospace; font-size:8px; color:var(--p); opacity: 0.7; letter-spacing:1px; }
 
         /* BUILD UI */
         #build-ui{ position:absolute; bottom:140px; left:50%; transform:translateX(-50%); width:240px; text-align:center; transition:opacity 0.8s, transform 0.8s; }
@@ -222,6 +224,7 @@
         </div>
     </div>
 
+    <!-- Státusz mezők a jobb alsó sarokban -->
     <div id="statusbox">
         <div class="sb-r">AR <b>AKTÍV</b></div>
         <div class="sb-r" id="sb-clock">--:--</div>
@@ -585,7 +588,7 @@ function buildCinematicFloors(){
 
 function buildAntenna(){
     const topY=BASE_Y+FLOORS.length*FH; const rTop = FW * Math.pow(0.92, FLOORS.length);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(rTop*0.2, rTop*0.6, 0.3, 16), new THREE.MeshStandardMaterial({color:0x222222, metalness:0.8, roughness:0.5, transparent:true, opacity:0}));
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(rTop*0.2, rTop*0.6, 0.3, 16), new MeshStandardMaterial({color:0x222222, metalness:0.8, roughness:0.5, transparent:true, opacity:0}));
     base.position.set(0, topY+0.15, 0); base.name='antBase'; base.castShadow = true; scene.add(base);
 
     const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.02, 2.0, 8),new THREE.MeshStandardMaterial({color:0x88ccff, metalness:1, roughness:0.2, transparent:true,opacity:0}));
@@ -659,7 +662,13 @@ function selectFloor(idx){
     document.querySelectorAll('.fn-card').forEach((c,i)=> c.classList.toggle('active',i===selectedFloor));
     const cards=document.querySelectorAll('.fn-card'); if(cards[selectedFloor]) cards[selectedFloor].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
     fillPanel(idx);
-    if(!panelOpen){ panelOpen=true; document.getElementById('proj-panel').classList.add('open'); document.getElementById('tap-hint').classList.remove('show'); document.getElementById('modal-backdrop').classList.add('open'); }
+    if(!panelOpen){ 
+        panelOpen=true; 
+        document.getElementById('proj-panel').classList.add('open'); 
+        document.getElementById('tap-hint').classList.remove('show'); 
+        document.getElementById('modal-backdrop').classList.add('open'); 
+        document.getElementById('statusbox').style.opacity = '0'; // Státusz panel elhalványulása
+    }
 }
 
 function navFloor(dir){ selectFloor(((selectedFloor+dir)+FLOORS.length)%FLOORS.length); }
@@ -668,6 +677,7 @@ function closePanel() {
     panelOpen = false;
     document.getElementById('proj-panel').classList.remove('open');
     document.getElementById('modal-backdrop').classList.remove('open'); 
+    document.getElementById('statusbox').style.opacity = '1'; // Státusz panel visszahozása
     document.querySelectorAll('.fn-card').forEach(c=>c.classList.remove('active'));
     setTimeout(()=>{ if(buildPhase==='done') document.getElementById('tap-hint').classList.add('show'); },600);
 }
