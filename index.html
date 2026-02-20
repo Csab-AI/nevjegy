@@ -6,129 +6,234 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>KOVÁCS AI-GÁBOR // RESEARCH TOWER</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        *{ margin:0; padding:0; box-sizing:border-box; }
-        body{ background:#000; overflow:hidden; width:100vw; height:100vh; font-family:'Share Tech Mono',monospace; touch-action:none; }
-        #camera-bg{ position:fixed; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:0; }
-        #ar-canvas{ position:fixed; top:0; left:0; width:100%; height:100%; z-index:10; pointer-events:none; }
+        *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+        body{ background:#000; overflow:hidden; width:100vw; height:100vh; touch-action:none; }
+        #camera-bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
+        #ar-canvas{ position:fixed; inset:0; width:100%; height:100%; z-index:10; pointer-events:none; }
 
-        /* ── SPLASH ── */
+        /* ════ SPLASH ════ */
         #splash{
-            position:fixed; inset:0; background:#000; z-index:1000;
-            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
-            transition:opacity 1s ease;
+            position:fixed; inset:0; z-index:1000;
+            background:radial-gradient(ellipse at 50% 60%, #050d1a 0%, #000 70%);
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px;
+            transition:opacity 1.2s ease;
         }
         #splash.hidden{ opacity:0; pointer-events:none; }
-        .splash-logo{
-            font-family:'Orbitron',sans-serif; font-size:clamp(20px,5.5vw,34px); font-weight:900;
-            color:#fff; text-align:center; letter-spacing:4px; line-height:1.4;
+        .sp-eyebrow{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:6px; color:#ffffff22; }
+        .sp-name{
+            font-family:'Cormorant Garamond',serif; font-size:clamp(32px,9vw,58px); font-weight:300;
+            color:#fff; text-align:center; letter-spacing:6px; line-height:1.1;
         }
-        .splash-logo span{ color:#00cfff; display:block; font-size:0.6em; letter-spacing:8px; margin-top:4px; }
+        .sp-name em{ color:var(--p,#00cfff); font-style:normal; display:block; font-size:0.45em; letter-spacing:12px; margin-top:6px; font-family:'Share Tech Mono',monospace; }
+        .sp-divider{ width:60px; height:1px; background:var(--p,#00cfff); opacity:0.4; }
         #start-btn{
-            font-family:'Share Tech Mono',monospace; font-size:13px; letter-spacing:3px;
-            color:#000; background:linear-gradient(135deg,#00cfff,#0044cc); border:none;
-            padding:16px 40px; cursor:pointer; text-transform:uppercase;
-            clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
-            position:relative; overflow:hidden;
+            font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:4px;
+            color:#000; background:var(--p,#00cfff); border:none;
+            padding:16px 44px; cursor:pointer; text-transform:uppercase;
+            clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);
+            position:relative; overflow:hidden; transition:opacity 0.2s;
         }
-        #start-btn::before{ content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,#fff5,transparent); transform:translateX(-100%); animation:sh 2s infinite; }
-        @keyframes sh{ to{ transform:translateX(200%); } }
-        .splash-note{ font-size:9px; color:#ffffff22; letter-spacing:2px; text-align:center; max-width:260px; line-height:2; }
+        #start-btn:active{ opacity:0.8; }
+        #start-btn::before{
+            content:''; position:absolute; inset:0;
+            background:linear-gradient(90deg,transparent,#fff4,transparent);
+            transform:translateX(-100%); animation:sh 2.5s infinite;
+        }
+        @keyframes sh{ to{ transform:translateX(220%); } }
+        .sp-note{ font-family:'Share Tech Mono',monospace; font-size:8px; color:#ffffff22; letter-spacing:2px; text-align:center; }
 
-        /* ── HUD ── */
+        /* ════ CSS VARS (adaptív szín) ════ */
+        :root{
+            --p: #00cfff;
+            --s: #0044ff;
+            --a: #ff0066;
+            --pg: #00cfff66;
+            --pb: rgba(0,207,255,0.08);
+        }
+
+        /* ════ HUD ════ */
         #hud{ position:fixed; inset:0; z-index:20; pointer-events:none; opacity:0; transition:opacity 1s ease 0.5s; }
         #hud.visible{ opacity:1; }
-        .corner{ position:absolute; width:20px; height:20px; border-style:solid; border-color:#00cfff66; }
-        .c-tl{ top:12px; left:12px; border-width:1px 0 0 1px; }
-        .c-tr{ top:12px; right:12px; border-width:1px 1px 0 0; }
-        .c-bl{ bottom:12px; left:12px; border-width:0 0 1px 1px; }
-        .c-br{ bottom:12px; right:12px; border-width:0 1px 1px 0; }
+
+        /* Sarok díszek */
+        .corner{ position:absolute; width:18px; height:18px; border-style:solid; border-color:var(--pg); }
+        .c-tl{ top:14px; left:14px; border-width:1px 0 0 1px; }
+        .c-tr{ top:14px; right:14px; border-width:1px 1px 0 0; }
+        .c-bl{ bottom:14px; left:14px; border-width:0 0 1px 1px; }
+        .c-br{ bottom:14px; right:14px; border-width:0 1px 1px 0; }
+
         #scanline{
             position:absolute; top:0; left:0; right:0; height:1px;
-            background:linear-gradient(90deg,transparent,#00cfff55,transparent);
-            animation:scan 6s linear infinite; opacity:0.3;
+            background:linear-gradient(90deg,transparent,var(--p),transparent);
+            opacity:0.25; animation:scan 7s linear infinite;
         }
         @keyframes scan{ 0%{top:0} 100%{top:100%} }
 
         /* Névjegy – bal felső */
-        #namecard{ position:absolute; top:22px; left:18px; }
-        .nc-name{ font-family:'Orbitron',sans-serif; font-size:clamp(12px,3.2vw,17px); font-weight:900; color:#fff; letter-spacing:3px; text-shadow:0 0 16px #00cfff66; }
-        .nc-role{ font-size:8px; color:#00cfff88; letter-spacing:3px; margin-top:3px; }
-        .nc-sep{ width:120px; height:1px; background:linear-gradient(90deg,#00cfff44,transparent); margin:6px 0; }
-        .nc-info{ font-size:9px; color:#ffffff55; line-height:1.9; letter-spacing:0.5px; }
-        .nc-info b{ color:#ffffff99; }
+        #namecard{ position:absolute; top:22px; left:18px; max-width:55vw; }
+        .nc-name{
+            font-family:'Cormorant Garamond',serif; font-size:clamp(14px,3.8vw,20px); font-weight:600;
+            color:#fff; letter-spacing:2px;
+            text-shadow:0 0 24px var(--pg);
+        }
+        .nc-role{ font-family:'Share Tech Mono',monospace; font-size:8px; color:var(--p); letter-spacing:3px; margin-top:2px; opacity:0.7; }
+        .nc-sep{ width:80px; height:1px; background:linear-gradient(90deg,var(--p),transparent); margin:7px 0; opacity:0.35; }
+        .nc-data{ font-family:'Share Tech Mono',monospace; font-size:8px; color:#ffffff44; line-height:1.9; letter-spacing:0.5px; }
+        .nc-data b{ color:#ffffff88; }
 
         /* Állapot – jobb felső */
         #statusbox{ position:absolute; top:22px; right:18px; text-align:right; }
-        .sb-row{ font-size:8px; letter-spacing:2px; color:#ffffff33; margin-bottom:4px; }
-        .sb-row b{ color:#00cfff77; }
+        .sb-r{ font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:2px; color:#ffffff22; margin-bottom:4px; }
+        .sb-r b{ color:var(--p); opacity:0.7; }
 
-        /* Build progress bar */
-        #build-progress{
-            position:absolute; bottom:110px; left:50%; transform:translateX(-50%);
-            width:220px; text-align:center; pointer-events:none;
-            transition:opacity 0.5s;
+        /* Adaptív mód jelző */
+        #adapt-badge{
+            position:absolute; top:52px; right:18px;
+            font-family:'Share Tech Mono',monospace; font-size:7px;
+            letter-spacing:2px; color:var(--p); opacity:0.5;
+            transition:color 1.5s ease, opacity 0.5s;
         }
-        #build-progress.hidden{ opacity:0; }
-        #bp-label{ font-size:9px; letter-spacing:3px; color:#00cfff99; margin-bottom:6px; }
-        #bp-bar-bg{ height:2px; background:#00cfff22; position:relative; }
-        #bp-bar{ height:2px; background:linear-gradient(90deg,#0044ff,#00cfff); width:0%; transition:width 0.3s ease; box-shadow:0 0 8px #00cfff; }
-        #bp-floor{ font-size:8px; letter-spacing:2px; color:#ffffff33; margin-top:5px; }
 
-        /* Tipp */
-        #tap-tip{
-            position:absolute; bottom:110px; left:50%; transform:translateX(-50%);
-            font-size:10px; letter-spacing:3px; color:#ffffff44; text-align:center;
-            opacity:0; transition:opacity 1s ease; pointer-events:none; white-space:nowrap;
+        /* Build progress */
+        #build-ui{
+            position:absolute; bottom:130px; left:50%; transform:translateX(-50%);
+            width:240px; text-align:center; transition:opacity 0.8s;
         }
-        #tap-tip.visible{ opacity:1; }
+        #build-ui.gone{ opacity:0; pointer-events:none; }
+        #bp-label{ font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:3px; color:var(--p); opacity:0.8; margin-bottom:8px; }
+        #bp-track{ height:1px; background:var(--pb); position:relative; overflow:visible; }
+        #bp-fill{
+            position:absolute; left:0; top:0; height:1px;
+            background:linear-gradient(90deg,var(--s),var(--p));
+            box-shadow:0 0 8px var(--p);
+            width:0%; transition:width 0.4s ease;
+        }
+        #bp-dot{
+            position:absolute; top:-3px; width:7px; height:7px;
+            background:var(--p); border-radius:50%; box-shadow:0 0 10px var(--p);
+            right:0; transition:box-shadow 1.5s;
+        }
+        #bp-text{ font-family:'Share Tech Mono',monospace; font-size:7px; letter-spacing:2px; color:#ffffff33; margin-top:8px; }
 
-        /* ── PROJEKT PANEL ── */
+        /* Tap hint */
+        #tap-hint{
+            position:absolute; bottom:130px; left:50%; transform:translateX(-50%);
+            font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:4px;
+            color:#ffffff33; white-space:nowrap; opacity:0; transition:opacity 1s;
+            pointer-events:none;
+        }
+        #tap-hint.show{ opacity:1; }
+
+        /* ════ PROJEKT KÁRTYA PANEL ════ */
         #proj-panel{
-            position:absolute; bottom:0; left:0; right:0;
-            background:linear-gradient(to top,rgba(0,4,14,0.97) 0%,rgba(0,4,14,0.93) 65%,transparent 100%);
-            padding:24px 22px 32px;
-            transform:translateY(105%); transition:transform 0.55s cubic-bezier(0.16,1,0.3,1);
-            pointer-events:all; border-top:1px solid #00cfff22;
-            backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-            z-index:30;
+            position:absolute; bottom:0; left:0; right:0; z-index:30;
+            pointer-events:all;
+            transform:translateY(100%);
+            transition:transform 0.6s cubic-bezier(0.16,1,0.3,1);
         }
         #proj-panel.open{ transform:translateY(0); }
-        #pp-close{
-            position:absolute; top:12px; right:18px;
-            font-size:9px; letter-spacing:3px; color:#ffffff44; cursor:pointer;
-            padding:7px 12px; border:1px solid #ffffff22;
+
+        /* Üveg háttér */
+        .pp-glass{
+            background:linear-gradient(to top, rgba(0,3,10,0.97) 0%, rgba(0,5,18,0.94) 60%, rgba(0,8,25,0.80) 100%);
+            backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+            border-top:1px solid var(--pg);
+            padding:20px 20px 28px;
+        }
+
+        /* Navigáció – mini kártyák */
+        #floor-nav{
+            display:flex; gap:7px; margin-bottom:16px; overflow-x:auto;
+            scrollbar-width:none; -webkit-overflow-scrolling:touch;
+            padding-bottom:2px;
+        }
+        #floor-nav::-webkit-scrollbar{ display:none; }
+        .fn-card{
+            flex-shrink:0; width:52px; padding:8px 6px; text-align:center;
+            border:1px solid #ffffff0f; cursor:pointer;
+            transition:border-color 0.3s, background 0.3s, transform 0.2s;
             clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
         }
-        #pp-close:active{ color:#fff; }
-
-        .pp-top{ display:flex; align-items:flex-start; gap:14px; margin-bottom:14px; }
-        #pp-floor-badge{
-            font-family:'Orbitron',sans-serif; font-size:11px; font-weight:900;
-            width:42px; height:42px; border-radius:4px; display:flex; flex-direction:column;
-            align-items:center; justify-content:center; flex-shrink:0;
-            border:1px solid; line-height:1.1;
+        .fn-card.active{
+            border-color:var(--p) !important;
+            background:var(--pb) !important;
+            transform:translateY(-3px);
         }
-        #pp-floor-badge .fl-num{ font-size:16px; }
-        #pp-floor-badge .fl-lbl{ font-size:7px; letter-spacing:2px; opacity:0.7; }
-        .pp-titles{}
-        #pp-name{ font-family:'Orbitron',sans-serif; font-size:clamp(15px,4vw,20px); font-weight:900; color:#fff; letter-spacing:3px; }
-        #pp-sub{ font-size:9px; letter-spacing:3px; margin-top:3px; }
-        #pp-desc{ font-size:11px; color:#ffffffbb; line-height:1.9; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid #ffffff0f; }
-        .pp-tech{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
-        .tag{ font-size:8px; letter-spacing:2px; padding:5px 9px; border:1px solid; clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%); opacity:0.85; }
-        .pp-stats{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-        .sbox{ text-align:center; padding:10px 4px; border:1px solid #ffffff0f; background:rgba(0,207,255,0.03); }
-        .sv{ font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; }
-        .sl{ font-size:7px; letter-spacing:2px; color:#ffffff44; margin-top:3px; }
+        .fn-card:active{ transform:scale(0.95); }
+        .fn-num{
+            font-family:'Orbitron',sans-serif; font-size:9px; font-weight:700;
+            margin-bottom:4px; line-height:1;
+        }
+        .fn-dot{ width:5px; height:5px; border-radius:50%; margin:0 auto; }
+        .fn-name{ font-family:'Share Tech Mono',monospace; font-size:6px; letter-spacing:1px; color:#ffffff55; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-        /* ── ERROR ── */
+        /* Projekt tartalom */
+        .pp-header{ display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+        #pp-badge{
+            font-family:'Orbitron',sans-serif; font-size:18px; font-weight:900;
+            width:44px; height:44px; border-radius:3px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            border:1px solid var(--pg); color:var(--p);
+            background:var(--pb); line-height:1;
+            transition:color 0.5s, border-color 0.5s, background 0.5s;
+        }
+        .pp-titles{ flex:1; min-width:0; }
+        #pp-name{
+            font-family:'Cormorant Garamond',serif; font-size:clamp(18px,5vw,26px); font-weight:600;
+            color:#fff; letter-spacing:2px; line-height:1;
+            transition:color 0.5s, text-shadow 0.5s;
+        }
+        #pp-sub{ font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:3px; margin-top:4px; opacity:0.7; transition:color 0.5s; }
+
+        /* Nav gombok a panelen belül */
+        .pp-nav{ display:flex; gap:8px; margin-left:auto; align-self:center; }
+        .pp-nav-btn{
+            font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1px;
+            width:32px; height:28px; border:1px solid var(--pg); background:transparent;
+            color:var(--p); cursor:pointer; display:flex; align-items:center; justify-content:center;
+            clip-path:polygon(3px 0%,100% 0%,calc(100% - 3px) 100%,0% 100%);
+            transition:background 0.2s; flex-shrink:0;
+        }
+        .pp-nav-btn:active{ background:var(--pb); }
+        #pp-close-btn{
+            font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:2px;
+            color:#ffffff33; border:1px solid #ffffff11; background:transparent;
+            padding:5px 10px; cursor:pointer;
+            clip-path:polygon(3px 0%,100% 0%,calc(100% - 3px) 100%,0% 100%);
+        }
+        #pp-close-btn:active{ color:#fff; }
+
+        #pp-desc{
+            font-family:'Cormorant Garamond',serif; font-size:clamp(13px,3.5vw,16px);
+            font-weight:300; color:#ffffffbb; line-height:1.75; letter-spacing:0.3px;
+            margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #ffffff08;
+        }
+        .pp-tech{ display:flex; flex-wrap:wrap; gap:5px; margin-bottom:14px; }
+        .tag{
+            font-family:'Share Tech Mono',monospace; font-size:7px; letter-spacing:2px;
+            padding:4px 9px; border:1px solid var(--pg); color:var(--p);
+            background:var(--pb); opacity:0.9;
+            clip-path:polygon(3px 0%,100% 0%,calc(100% - 3px) 100%,0% 100%);
+            transition:color 0.5s, border-color 0.5s, background 0.5s;
+        }
+        .pp-stats{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+        .sbox{
+            text-align:center; padding:10px 4px;
+            border:1px solid #ffffff08; background:rgba(255,255,255,0.02);
+            transition:border-color 0.5s;
+        }
+        .sbox.active-box{ border-color:var(--pg); }
+        .sv{ font-family:'Orbitron',sans-serif; font-size:14px; font-weight:700; color:var(--p); transition:color 0.5s; }
+        .sl{ font-family:'Share Tech Mono',monospace; font-size:6px; letter-spacing:2px; color:#ffffff33; margin-top:3px; }
+
+        /* ════ ERROR ════ */
         #error-msg{ position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:2000; background:#000000f2; padding:32px; text-align:center; }
         #error-msg.show{ display:flex; }
-        #error-msg h2{ font-family:'Orbitron',sans-serif; color:#ff3355; font-size:16px; letter-spacing:3px; }
-        #error-msg p{ color:#ffffff55; font-size:11px; letter-spacing:1px; line-height:2; max-width:300px; }
-        #err-detail{ color:#ff335544; font-size:9px; margin-top:8px; display:block; }
+        #error-msg h2{ font-family:'Orbitron',sans-serif; color:#ff3355; font-size:15px; letter-spacing:3px; }
+        #error-msg p{ font-family:'Share Tech Mono',monospace; color:#ffffff44; font-size:10px; line-height:2; max-width:300px; }
+        #err-detail{ color:#ff335533; font-size:8px; margin-top:8px; display:block; }
     </style>
 </head>
 <body>
@@ -136,6 +241,7 @@
 <video id="camera-bg" autoplay muted playsinline></video>
 <canvas id="ar-canvas"></canvas>
 
+<!-- HUD -->
 <div id="hud">
     <div id="scanline"></div>
     <div class="corner c-tl"></div><div class="corner c-tr"></div>
@@ -143,55 +249,69 @@
 
     <div id="namecard">
         <div class="nc-name">KOVÁCS AI-GÁBOR</div>
-        <div class="nc-role">// LEAD AI ENGINEER · NEURAL ARCHITECT //</div>
+        <div class="nc-role">LEAD AI ENGINEER  ·  NEURAL ARCHITECT</div>
         <div class="nc-sep"></div>
-        <div class="nc-info">
-            <b>ai@kovacs.dev</b> · +36 XX XXX XXXX<br>
-            github.com/kovacs-ai · Budapest, HU
+        <div class="nc-data">
+            <b>ai@kovacs.dev</b>  ·  +36 XX XXX XXXX<br>
+            github.com/kovacs-ai  ·  Budapest, HU
         </div>
     </div>
 
     <div id="statusbox">
-        <div class="sb-row">AR <b>AKTÍV</b></div>
-        <div class="sb-row" id="sb-clock">--:--</div>
-        <div class="sb-row"><b>6</b> PROJEKT</div>
+        <div class="sb-r">AR <b>AKTÍV</b></div>
+        <div class="sb-r" id="sb-clock">--:--</div>
     </div>
+    <div id="adapt-badge">CYBER</div>
 
-    <div id="build-progress">
-        <div id="bp-label">// ÉPÍTÉS FOLYAMATBAN //</div>
-        <div id="bp-bar-bg"><div id="bp-bar"></div></div>
-        <div id="bp-floor">ALAPOK LERAKÁSA...</div>
+    <div id="build-ui">
+        <div id="bp-label">RESEARCH TOWER ÉPÜL</div>
+        <div id="bp-track"><div id="bp-fill"></div><div id="bp-dot"></div></div>
+        <div id="bp-text">INICIALIZÁLÁS...</div>
     </div>
-
-    <div id="tap-tip">// KOPPINTS EGY EMELETRE //</div>
+    <div id="tap-hint">// KOPPINTS EGY EMELETRE //</div>
 </div>
 
 <!-- Projekt panel -->
 <div id="proj-panel">
-    <div id="pp-close" onclick="closePanel()">✕ BEZÁR</div>
-    <div class="pp-top">
-        <div id="pp-floor-badge">
-            <div class="fl-num">0</div>
-            <div class="fl-lbl">EMELET</div>
+    <div class="pp-glass">
+        <!-- Mini kártya navigáció -->
+        <div id="floor-nav"></div>
+
+        <!-- Fejléc -->
+        <div class="pp-header">
+            <div id="pp-badge">01</div>
+            <div class="pp-titles">
+                <div id="pp-name">–</div>
+                <div id="pp-sub">–</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+                <button id="pp-close-btn" onclick="closePanel()">✕ BEZÁR</button>
+                <div class="pp-nav">
+                    <button class="pp-nav-btn" onclick="navFloor(-1)">‹</button>
+                    <button class="pp-nav-btn" onclick="navFloor(+1)">›</button>
+                </div>
+            </div>
         </div>
-        <div class="pp-titles">
-            <div id="pp-name">–</div>
-            <div id="pp-sub">–</div>
+
+        <div id="pp-desc">–</div>
+
+        <div class="pp-tech" id="pp-tech"></div>
+
+        <div class="pp-stats">
+            <div class="sbox"><div class="sv" id="sv1">–</div><div class="sl" id="sl1">–</div></div>
+            <div class="sbox"><div class="sv" id="sv2">–</div><div class="sl" id="sl2">–</div></div>
+            <div class="sbox"><div class="sv" id="sv3">–</div><div class="sl" id="sl3">–</div></div>
         </div>
-    </div>
-    <div id="pp-desc">–</div>
-    <div class="pp-tech" id="pp-tech"></div>
-    <div class="pp-stats">
-        <div class="sbox"><div class="sv" id="sv1">–</div><div class="sl" id="sl1">–</div></div>
-        <div class="sbox"><div class="sv" id="sv2">–</div><div class="sl" id="sl2">–</div></div>
-        <div class="sbox"><div class="sv" id="sv3">–</div><div class="sl" id="sl3">–</div></div>
     </div>
 </div>
 
+<!-- Splash -->
 <div id="splash">
-    <div class="splash-logo">RESEARCH TOWER<span>KOVÁCS AI-GÁBOR</span></div>
-    <button id="start-btn" onclick="startAR()">🏗️ TORONY ÉPÍTÉSE</button>
-    <div class="splash-note">Kamera szükséges · Forgasd a telefont tájképbe</div>
+    <div class="sp-eyebrow">A R   P O R T F Ó L I Ó</div>
+    <div class="sp-name">RESEARCH<br>TOWER<em>KOVÁCS AI-GÁBOR</em></div>
+    <div class="sp-divider"></div>
+    <button id="start-btn" onclick="startAR()">TORONY MEGÉPÍTÉSE</button>
+    <div class="sp-note">kamera szükséges  ·  tájkép ajánlott</div>
 </div>
 
 <div id="error-msg">
@@ -203,103 +323,89 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ════════════════════════════════════════════════════════════
-// PROJEKT ADATOK – 6 EMELET
+// PROJEKT ADATOK
 // ════════════════════════════════════════════════════════════
 const FLOORS = [
-    {
-        floor: 1, name:'DIAG-NET', sub:'Diagnosztikai AI rendszer',
-        desc:'CT és röntgen képek mélytanuló alapú elemzése. 94.3%-os pontossággal azonosítja tüdőelváltozásokat, töréseket, daganatos gócokat. Napi 2000+ kép valós időben.',
-        tech:['Python','PyTorch','MONAI','DICOM','FastAPI','Docker'],
-        stats:[['94.3%','PONTOSSÁG'],['2000+','KÉP/NAP'],['8ms','VÁLASZIDŐ']],
-        color:'#ff4422', hex:0xff4422,
-    },
-    {
-        floor: 2, name:'GENO-SCAN', sub:'Genomikai variáns elemző',
-        desc:'Ritka genetikai betegségek azonosítása NGS adatokból. 50 000+ variáns katalogizálása, korreláció ismert patogén mutációkkal. Klinikai döntéstámogató rendszer.',
-        tech:['Python','TensorFlow','BioPython','AWS','Pandas','R'],
-        stats:[['50k+','VARIÁNS'],['99.1%','SPECIFICITÁS'],['3 KH','ADAT']],
-        color:'#44ff88', hex:0x44ff88,
-    },
-    {
-        floor: 3, name:'NEURO-VISION', sub:'MRI agyszövet szegmentáló',
-        desc:'3D agyszövet szegmentálás stroke és agytumor detektáláshoz. 3D U-Net architektúra submilliméteres pontossággal. FDA-minősítés folyamatban.',
-        tech:['PyTorch','3D U-Net','CUDA','ITK','NiBabel','SimpleITK'],
-        stats:[['0.8mm','FELBONTÁS'],['96.7%','DICE'],['45s','SCAN/MRI']],
-        color:'#cc88ff', hex:0xcc88ff,
-    },
-    {
-        floor: 4, name:'PHARMA-PRED', sub:'Gyógyszerhatás előrejelző',
-        desc:'Mellékhatás és gyógyszerkölcsönhatás predikció LLM-mel. Molekuláris struktúra alapú farmakokinetika és toxicitás becslés. 10 000+ vegyület adatbázis.',
-        tech:['LangChain','GPT-4','RDKit','FastAPI','PostgreSQL','React'],
-        stats:[['10k+','VEGYÜLET'],['87%','PREDIKCIÓ'],['2024','LAUNCH']],
-        color:'#ffaa00', hex:0xffaa00,
-    },
-    {
-        floor: 5, name:'CLINIC-BOT', sub:'Orvosi LLM asszisztens',
-        desc:'Klinikai dokumentáció automatizálás finomhangolt LLaMA modellel. RAG architektúra 50 000+ publikáció tudásbázisával. GDPR-kompatibilis, on-premise.',
-        tech:['LLaMA','RAG','ChromaDB','Docker','Kubernetes','FastAPI'],
-        stats:[['50k','PUBLIKÁCIÓ'],['92%','ELÉGEDETTSÉG'],['On-prem','DEPLOY']],
-        color:'#00ccff', hex:0x00ccff,
-    },
-    {
-        floor: 6, name:'VITAL-FLOW', sub:'ICU valós idejű monitoring',
-        desc:'Valós idejű beteg állapot predikció intenzív osztályon. 15+ vitális paraméter streaming elemzése. 6 órás előrejelzési ablak kritikus állapotromlásra. 3 kórházban bevezetve.',
-        tech:['Kafka','Spark','scikit-learn','Grafana','TimescaleDB','Go'],
-        stats:[['6 óra','ELŐREJELZÉS'],['15+','PARAMÉTER'],['3','KÓRHÁZ']],
-        color:'#ff6688', hex:0xff6688,
-    },
+    { n:1, name:'DIAG-NET',     sub:'Diagnosztikai AI rendszer',
+      desc:'CT és röntgen képek mélytanuló alapú elemzése. 94.3%-os pontossággal azonosítja tüdőelváltozásokat, töréseket és daganatos gócokat. Napi 2000+ képet dolgoz fel valós időben.',
+      tech:['Python','PyTorch','MONAI','DICOM','FastAPI','Docker'],
+      stats:[['94.3%','PONTOSSÁG'],['2000+','KÉP/NAP'],['8ms','VÁLASZIDŐ']],
+      col:'#ff4422', hex:0xff4422 },
+    { n:2, name:'GENO-SCAN',    sub:'Genomikai variáns elemző',
+      desc:'Ritka genetikai betegségek azonosítása NGS adatokból. 50 000+ variáns katalogizálása és korreláció ismert patogén mutációkkal. Klinikai döntéstámogató rendszer.',
+      tech:['Python','TensorFlow','BioPython','AWS','Pandas','R'],
+      stats:[['50k+','VARIÁNS'],['99.1%','SPEC.'],['3 KH','TANÍTÁS']],
+      col:'#44ff88', hex:0x44ff88 },
+    { n:3, name:'NEURO-VISION', sub:'MRI agyszövet szegmentáló',
+      desc:'3D agyszövet szegmentálás stroke és agytumor detektáláshoz. 3D U-Net architektúra submilliméteres pontossággal különíti el az agyszöveteket. FDA-minősítés folyamatban.',
+      tech:['PyTorch','3D U-Net','CUDA','ITK','NiBabel','SimpleITK'],
+      stats:[['0.8mm','FELBONTÁS'],['96.7%','DICE'],['45s','SCAN/MRI']],
+      col:'#cc88ff', hex:0xcc88ff },
+    { n:4, name:'PHARMA-PRED',  sub:'Gyógyszerhatás előrejelző',
+      desc:'Mellékhatás és gyógyszerkölcsönhatás predikció LLM-mel. Molekuláris struktúra alapú farmakokinetika és toxicitás becslés. 10 000+ vegyület adatbázis.',
+      tech:['LangChain','GPT-4','RDKit','FastAPI','PostgreSQL','React'],
+      stats:[['10k+','VEGYÜLET'],['87%','PREDIKCIÓ'],['2024','LAUNCH']],
+      col:'#ffaa00', hex:0xffaa00 },
+    { n:5, name:'CLINIC-BOT',   sub:'Orvosi LLM asszisztens',
+      desc:'Klinikai dokumentáció automatizálás finomhangolt LLaMA modellel. RAG architektúra 50 000+ orvosi publikáció tudásbázisával. GDPR-kompatibilis, on-premise telepítés.',
+      tech:['LLaMA','RAG','ChromaDB','Docker','Kubernetes','FastAPI'],
+      stats:[['50k','PUBLIKÁCIÓ'],['92%','ELÉGEDETTSÉG'],['On-prem','DEPLOY']],
+      col:'#00ccff', hex:0x00ccff },
+    { n:6, name:'VITAL-FLOW',   sub:'ICU valós idejű monitoring',
+      desc:'Valós idejű beteg állapot predikció intenzív osztályon. 15+ vitális paraméter streaming elemzése, 6 órás előrejelzési ablak kritikus állapotromlásra. 3 kórházban bevezetve.',
+      tech:['Kafka','Spark','scikit-learn','Grafana','TimescaleDB','Go'],
+      stats:[['6 óra','ELŐREJELZÉS'],['15+','PARAMÉTER'],['3','KÓRHÁZ']],
+      col:'#ff6688', hex:0xff6688 },
 ];
 
 // ════════════════════════════════════════════════════════════
 // ÁLLAPOT
 // ════════════════════════════════════════════════════════════
 let scene, camera, renderer, raycaster, mouse;
-let towerGroup;
-let floorMeshes   = [];   // { group, glassMesh, frameMesh, glowMesh, data, built }
-let selectedFloor = -1;
-let buildPhase    = 'idle';  // idle → foundation → floors → antenna → done
-let buildTimer    = 0;
-let builtFloors   = 0;
+let towerGroup, floorGroups=[];
+let buildPhase='idle', builtCount=0;
+let selectedFloor=-1, panelOpen=false;
 
-// Kamera kontrol
-let gyroAvailable=false, touchStartX=0, touchStartY=0;
-let camRotX=0, camRotY=0, targetRotX=0, targetRotY=0;
-let zoomCurrent=1.0, zoomTarget=1.0;
-let pinchStartDist=0, pinchStartScale=1.0;
-const ZOOM_MIN=0.4, ZOOM_MAX=4.0;
+// Kamera
+let gyroAvail=false, tRotX=0, tRotY=0, cRotX=0, cRotY=0;
+let touchX=0, touchY=0, touchMoved=false;
+let zoomT=1, zoomC=1, pinchD0=0, pinchZ0=1;
+const ZMIN=0.4, ZMAX=4;
 
-// Épület konstansok
-const FLOOR_H     = 0.55;   // emelet magassága
-const FLOOR_W     = 1.6;    // épület szélessége
-const FLOOR_D     = 1.0;    // épület mélysége
-const BASE_Y      = -1.5;   // talaj szintje
-const BUILD_TOTAL = 17;     // másodperc (15-20s közt)
+// Adaptív szín
+let sampleCanvas, sampleCtx, lastSample=0;
+let palP=new THREE.Color(0x00cfff), palS=new THREE.Color(0x0044ff), palA=new THREE.Color(0xff0066);
+let palPT=new THREE.Color(0x00cfff), palST=new THREE.Color(0x0044ff), palAT=new THREE.Color(0xff0066);
+let adaptMats=[];  // {mat, role}
+
+// Épület méretek – vékony, Zaha Hadid
+const FH=0.52, FW=1.1, BASE_Y=-1.8;
+const BUILD_S=17; // mp
 
 // ════════════════════════════════════════════════════════════
 // INDÍTÁS
 // ════════════════════════════════════════════════════════════
-async function startAR() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video:{ facingMode:'environment' }, audio:false
-        });
-        document.getElementById('camera-bg').srcObject = stream;
+async function startAR(){
+    try{
+        const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+        document.getElementById('camera-bg').srcObject=stream;
+
+        // Sample canvas adaptív színhez
+        sampleCanvas=document.createElement('canvas');
+        sampleCanvas.width=64; sampleCanvas.height=36;
+        sampleCtx=sampleCanvas.getContext('2d',{willReadFrequently:true});
 
         initThree();
+        buildFloorNav();
         startBuild();
         animate();
 
         document.getElementById('hud').classList.add('visible');
-        const splash=document.getElementById('splash');
-        splash.classList.add('hidden');
-        setTimeout(()=>splash.style.display='none',1000);
+        document.getElementById('splash').classList.add('hidden');
+        setTimeout(()=>document.getElementById('splash').style.display='none',1200);
+        setInterval(()=>{ const e=document.getElementById('sb-clock'); if(e) e.textContent=new Date().toTimeString().slice(0,5); },1000);
 
-        setInterval(()=>{
-            const el=document.getElementById('sb-clock');
-            if(el) el.textContent=new Date().toTimeString().slice(0,5);
-        },1000);
-
-    } catch(err){
+    }catch(err){
         document.getElementById('err-detail').textContent=err.name+': '+err.message;
         document.getElementById('error-msg').classList.add('show');
         document.getElementById('splash').style.display='none';
@@ -307,479 +413,477 @@ async function startAR() {
 }
 
 // ════════════════════════════════════════════════════════════
-// THREE.JS INIT
+// THREE INIT
 // ════════════════════════════════════════════════════════════
 function initThree(){
     const canvas=document.getElementById('ar-canvas');
     const W=window.innerWidth, H=window.innerHeight;
-
     renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,premultipliedAlpha:false});
-    renderer.setSize(W,H);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-    renderer.setClearColor(0x000000,0);
-    renderer.shadowMap.enabled=false;
-
+    renderer.setSize(W,H); renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setClearColor(0,0);
     scene=new THREE.Scene();
-    camera=new THREE.PerspectiveCamera(55,W/H,0.01,200);
-    camera.position.set(0,1.2,6);
-    camera.lookAt(0,0.5,0);
-
-    raycaster=new THREE.Raycaster();
-    mouse=new THREE.Vector2();
+    camera=new THREE.PerspectiveCamera(52,W/H,0.01,200);
+    camera.position.set(0,1,5.5);
+    camera.lookAt(0,.8,0);
+    raycaster=new THREE.Raycaster(); mouse=new THREE.Vector2();
 
     // Fények
-    scene.add(new THREE.AmbientLight(0x0a1a2a,1.2));
-    const key=new THREE.DirectionalLight(0x4488ff,0.8);
-    key.position.set(-3,8,4); scene.add(key);
-    const fill=new THREE.DirectionalLight(0x001133,0.4);
-    fill.position.set(3,2,-4); scene.add(fill);
+    scene.add(new THREE.AmbientLight(0x080e1a,1));
+    const key=new THREE.DirectionalLight(0x88bbff,0.7); key.position.set(-2,6,3); scene.add(key);
+    const rim=new THREE.DirectionalLight(0x001133,0.4); rim.position.set(3,1,-4); scene.add(rim);
 
-    towerGroup=new THREE.Group();
-    scene.add(towerGroup);
+    towerGroup=new THREE.Group(); scene.add(towerGroup);
 
-    buildEnvironment();
+    buildGround();
+    buildFloors();
     setupGyro();
 
     window.addEventListener('resize',()=>{
         const W=window.innerWidth,H=window.innerHeight;
-        camera.aspect=W/H; camera.updateProjectionMatrix();
-        renderer.setSize(W,H);
+        camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H);
     });
 }
 
-// ── Környezet: holografikus alap, grid ──
-function buildEnvironment(){
-    // Grid alap
-    const gridSize=20, gridDiv=30;
-    const gridGeo=new THREE.PlaneGeometry(gridSize,gridSize,gridDiv,gridDiv);
-    const gridMat=new THREE.MeshBasicMaterial({color:0x00cfff,wireframe:true,transparent:true,opacity:0.06});
-    const grid=new THREE.Mesh(gridGeo,gridMat);
-    grid.rotation.x=-Math.PI/2;
-    grid.position.y=BASE_Y-0.01;
-    scene.add(grid);
+// ── Talaj: elegáns holografikus grid ──
+function buildGround(){
+    // Vékony, ritka grid
+    const g=new THREE.GridHelper(14,28,0x00cfff,0x001133);
+    g.position.y=BASE_Y; g.material.transparent=true; g.material.opacity=0.12;
+    scene.add(g);
 
-    // Alap platformon izzó karika
-    const ringGeo=new THREE.TorusGeometry(1.2,0.018,8,64);
-    const ringMat=new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0.55});
-    const ring=new THREE.Mesh(ringGeo,ringMat);
-    ring.rotation.x=Math.PI/2;
-    ring.position.y=BASE_Y+0.01;
-    ring.name='baseRing';
-    scene.add(ring);
+    // Izzó alap karika – vékony, elegáns
+    const ring=mkRing(1.0,0.012,0x00cfff,0.7); ring.rotation.x=Math.PI/2; ring.position.y=BASE_Y+0.01; ring.name='r1'; scene.add(ring);
+    const ring2=mkRing(1.6,0.006,0x0044ff,0.35); ring2.rotation.x=Math.PI/2; ring2.position.y=BASE_Y+0.01; ring2.name='r2'; scene.add(ring2);
+    const ring3=mkRing(2.4,0.004,0x00cfff,0.15); ring3.rotation.x=Math.PI/2; ring3.position.y=BASE_Y+0.01; ring3.name='r3'; scene.add(ring3);
 
-    // Külső karika
-    const ring2=new THREE.Mesh(
-        new THREE.TorusGeometry(1.8,0.008,8,64),
-        new THREE.MeshBasicMaterial({color:0x0044ff,transparent:true,opacity:0.3})
-    );
-    ring2.rotation.x=Math.PI/2; ring2.position.y=BASE_Y+0.01; ring2.name='ring2';
-    scene.add(ring2);
+    adaptMats.push({mat:ring.material,role:'p'});
+    adaptMats.push({mat:ring2.material,role:'s'});
+    adaptMats.push({mat:ring3.material,role:'p'});
 
-    // Szórványos háttér részecskék
-    const cnt=400, pos=new Float32Array(cnt*3);
-    for(let i=0;i<cnt;i++){
-        pos[i*3]=(Math.random()-0.5)*30;
-        pos[i*3+1]=(Math.random()-0.5)*20+2;
-        pos[i*3+2]=(Math.random()-0.5)*30-5;
-    }
-    const pGeo=new THREE.BufferGeometry();
-    pGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));
-    scene.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x224466,size:0.04,transparent:true,opacity:0.6,sizeAttenuation:true})));
+    // Alap pódium – vékony, elegáns
+    const podGeo=new THREE.CylinderGeometry(0.7,0.8,0.06,64);
+    const podMat=new THREE.MeshPhongMaterial({color:0x000a18,emissive:0x00cfff,emissiveIntensity:0.06,transparent:true,opacity:0.8,shininess:300});
+    const pod=new THREE.Mesh(podGeo,podMat);
+    pod.position.y=BASE_Y+0.03; scene.add(pod);
+    adaptMats.push({mat:podMat,role:'p'});
+
+    // Talaj részecskék
+    const cnt=300, pos=new Float32Array(cnt*3);
+    for(let i=0;i<cnt;i++){ pos[i*3]=(Math.random()-.5)*20; pos[i*3+1]=BASE_Y+(Math.random()-.5)*0.5; pos[i*3+2]=(Math.random()-.5)*20; }
+    const pg=new THREE.BufferGeometry(); pg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const pm=new THREE.PointsMaterial({color:0x0033aa,size:0.025,transparent:true,opacity:0.5,sizeAttenuation:true});
+    scene.add(new THREE.Points(pg,pm)); adaptMats.push({mat:pm,role:'s'});
 }
 
-// ════════════════════════════════════════════════════════════
-// ÉPÜLET ELŐKÉSZÍTÉS – minden emelet létrehozása, de rejtve
-// ════════════════════════════════════════════════════════════
-function buildEnvironment_floors(){
+function mkRing(r,t,col,op){
+    const m=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op});
+    return new THREE.Mesh(new THREE.TorusGeometry(r,t,8,80),m);
+}
+
+// ── Zaha Hadid torony – vékony, csavart, üveg ──
+function buildFloors(){
     FLOORS.forEach((data,i)=>{
         const group=new THREE.Group();
-        const y=BASE_Y+(i+0.5)*FLOOR_H;
-        group.position.set(0,y,0);
-        group.scale.set(1,0,1); // összenyomva kezdetben
-        towerGroup.add(group);
+        // Torony csavarodik felfelé – minden emelet kicsit el van forgatva és eltolva
+        const twist = i*0.08;           // csavarás
+        const lean  = Math.sin(i*0.6)*0.04;  // enyhe hajlás
 
-        // ── Üveg panel (fő test) ──
-        const glassGeo=new THREE.BoxGeometry(FLOOR_W,FLOOR_H*0.82,FLOOR_D);
-        const glassMat=new THREE.MeshPhongMaterial({
-            color:new THREE.Color(data.hex).multiplyScalar(0.12),
-            emissive:new THREE.Color(data.hex),
-            emissiveIntensity:0.08,
-            transparent:true,
-            opacity:0.55,
-            shininess:200,
-            specular:new THREE.Color(data.hex),
+        group.rotation.y = twist;
+        group.position.set(lean, BASE_Y+(i+0.5)*FH, lean*0.3);
+        group.scale.set(1,0.001,1);   // összenyomva – build animhoz
+
+        // ── Fő üvegpanel – vékony, tükröző ──
+        // Zaha Hadid: ellipszoid keresztmetszet, nem doboz
+        const fw = FW*(1-i*0.022);   // felfelé szűkül elegánsan
+        const fd = FW*0.55*(1-i*0.018);
+
+        const glassGeo = new THREE.BoxGeometry(fw, FH*0.78, fd);
+        const glassMat = new THREE.MeshPhongMaterial({
+            color: new THREE.Color(data.hex).multiplyScalar(0.05),
+            emissive: new THREE.Color(data.hex),
+            emissiveIntensity: 0.04,
+            transparent: true, opacity: 0.38,
+            shininess: 400, specular: new THREE.Color(0xffffff),
+            side: THREE.DoubleSide,
         });
-        const glassMesh=new THREE.Mesh(glassGeo,glassMat);
-        group.add(glassMesh);
+        const glass=new THREE.Mesh(glassGeo, glassMat);
+        group.add(glass);
+        glass.userData={fi:i};
+        adaptMats.push({mat:glassMat, role:'p', floorIdx:i});
 
-        // ── Acélváz élek ──
-        const frameGeo=new THREE.EdgesGeometry(new THREE.BoxGeometry(FLOOR_W,FLOOR_H*0.82,FLOOR_D));
-        const frameMat=new THREE.LineBasicMaterial({color:data.hex,transparent:true,opacity:0.9});
-        const frameMesh=new THREE.LineSegments(frameGeo,frameMat);
-        group.add(frameMesh);
+        // ── Acélváz élek – nagyon vékony ──
+        const edgeMat=new THREE.LineBasicMaterial({color:data.hex,transparent:true,opacity:0.7});
+        group.add(new THREE.LineSegments(new THREE.EdgesGeometry(glassGeo),edgeMat));
+        adaptMats.push({mat:edgeMat,role:'p',floorIdx:i});
 
-        // ── Vízszintes neon csík (emelet teteje) ──
-        const stripGeo=new THREE.BoxGeometry(FLOOR_W+0.02,0.025,FLOOR_D+0.02);
-        const stripMat=new THREE.MeshBasicMaterial({color:data.hex,transparent:true,opacity:0.9});
-        const strip=new THREE.Mesh(stripGeo,stripMat);
-        strip.position.y=FLOOR_H*0.41;
+        // ── Neon csík – vízszintes vonal a tetején ──
+        const stripH=0.016;
+        const stripMat=new THREE.MeshBasicMaterial({color:data.hex,transparent:true,opacity:0.95});
+        const strip=new THREE.Mesh(new THREE.BoxGeometry(fw+0.04,stripH,fd+0.04),stripMat);
+        strip.position.y=FH*0.39;
         group.add(strip);
+        adaptMats.push({mat:stripMat,role:'p',floorIdx:i});
 
-        // Ugyanaz az alján
-        const stripBot=strip.clone();
-        stripBot.position.y=-FLOOR_H*0.41;
-        group.add(stripBot);
+        // Alján is
+        const stripB=strip.clone(); stripB.position.y=-FH*0.39; group.add(stripB);
+
+        // ── Oldalsó függőleges acéloszlopok (4 sarok) ──
+        const cH=FH*0.82;
+        [[fw/2,fd/2],[-(fw/2),fd/2],[fw/2,-(fd/2)],[-(fw/2),-(fd/2)]].forEach(([cx,cz])=>{
+            const colMat=new THREE.MeshBasicMaterial({color:data.hex,transparent:true,opacity:0.5});
+            const col=new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,cH,6),colMat);
+            col.position.set(cx,0,cz); group.add(col);
+            adaptMats.push({mat:colMat,role:'p',floorIdx:i});
+        });
 
         // ── Glow aura ──
-        const glowGeo=new THREE.BoxGeometry(FLOOR_W+0.3,FLOOR_H*0.9,FLOOR_D+0.3);
-        const glowMat=new THREE.MeshBasicMaterial({color:data.hex,transparent:true,opacity:0.0,side:THREE.BackSide});
-        const glowMesh=new THREE.Mesh(glowGeo,glowMat);
-        group.add(glowMesh);
+        const glowMat=new THREE.MeshBasicMaterial({color:data.hex,transparent:true,opacity:0,side:THREE.BackSide});
+        const glow=new THREE.Mesh(new THREE.BoxGeometry(fw+0.35,FH*0.85,fd+0.35),glowMat);
+        group.add(glow);
+        adaptMats.push({mat:glowMat,role:'p',floorIdx:i});
 
-        // ── Emelet szám label ──
-        const label=createFloorLabel(i+1, data.name, data.color);
-        label.position.set(FLOOR_W*0.5+0.1,0,0);
-        group.add(label);
-
-        // Collider (a raycast-hoz)
-        glassMesh.userData={ floorIndex:i };
-
-        floorMeshes.push({ group, glassMesh, frameMesh, glowMesh, glassMat, stripMat, data, built:false, expandScale:1.0 });
+        towerGroup.add(group);
+        floorGroups.push({group,glass,glassMat,glowMat,stripMat,edgeMat,data,built:false,exScale:1,exY:0});
     });
+
+    // Antenna
+    buildAntenna();
 }
 
-function createFloorLabel(num, name, color){
-    const c=document.createElement('canvas'); c.width=256; c.height=80;
-    const ctx=c.getContext('2d');
-    ctx.font='bold 16px Orbitron,monospace';
-    ctx.fillStyle=color; ctx.textAlign='left';
-    ctx.shadowColor=color; ctx.shadowBlur=10;
-    ctx.fillText(`0${num}  ${name}`,10,30);
-    ctx.font='11px "Share Tech Mono",monospace';
-    ctx.fillStyle=color+'88'; ctx.shadowBlur=4;
-    // (no subtitle here for cleanliness)
-    const tex=new THREE.CanvasTexture(c);
-    const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.85});
-    const sprite=new THREE.Sprite(mat);
-    sprite.scale.set(1.4,0.44,1);
-    return sprite;
+function buildAntenna(){
+    const topY=BASE_Y+FLOORS.length*FH;
+    const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.02,1.4,8),new THREE.MeshBasicMaterial({color:0x88ccff,transparent:true,opacity:0}));
+    rod.position.set(0,topY+0.7,0); rod.name='antRod'; scene.add(rod);
+
+    const tip=new THREE.Mesh(new THREE.SphereGeometry(0.05,16,16),new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0}));
+    tip.position.set(0,topY+1.45,0); tip.name='antTip'; scene.add(tip);
+
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.2,16,16),new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0,side:THREE.BackSide}));
+    glow.position.copy(tip.position); glow.name='antGlow'; scene.add(glow);
+    adaptMats.push({mat:rod.material,role:'p'},{mat:tip.material,role:'p'},{mat:glow.material,role:'p'});
 }
 
 // ════════════════════════════════════════════════════════════
-// ÉPÍTÉSI SORREND – cinematic, 15-20s
+// BUILD ANIMÁCIÓ – cinematic 15-20s
 // ════════════════════════════════════════════════════════════
 function startBuild(){
-    buildEnvironment_floors();
-
-    const floorDelay = BUILD_TOTAL / (FLOORS.length + 2); // ~2.5s / emelet
-
-    // Foundation animáció
-    buildPhase='foundation';
-    updateBuildUI(0,'ALAPOK LERAKÁSA...');
-
-    setTimeout(()=>{
-        buildPhase='floors';
-        buildNextFloor(0, floorDelay);
-    }, 2500);
+    buildPhase='building';
+    const perFloor = (BUILD_S-3)/FLOORS.length;
+    setProgress(2,'ALAP LERAKÁSA...');
+    setTimeout(()=> buildFloor(0,perFloor), 2200);
 }
 
-function buildNextFloor(idx, delay){
-    if(idx >= FLOORS.length){
-        // Minden emelet kész → antenna
+function buildFloor(idx, perFloor){
+    if(idx>=FLOORS.length){
+        // Összes kész → antenna
+        setProgress(93,'ANTENNA TELEPÍTÉSE...');
+        animAntenna();
         setTimeout(()=>{
-            buildPhase='antenna';
-            buildAntenna();
-            updateBuildUI(100,'ANTENNA TELEPÍTÉSE...');
+            buildPhase='done';
+            setProgress(100,'TORONY KÉSZ');
             setTimeout(()=>{
-                buildPhase='done';
-                document.getElementById('build-progress').classList.add('hidden');
-                setTimeout(()=>{
-                    document.getElementById('tap-tip').classList.add('visible');
-                },500);
-            }, 2000);
-        }, 800);
+                document.getElementById('build-ui').classList.add('gone');
+                setTimeout(()=>document.getElementById('tap-hint').classList.add('show'),600);
+            },1000);
+        }, 2200);
         return;
     }
 
-    const pct = Math.round((idx/FLOORS.length)*85)+5;
-    updateBuildUI(pct, `${idx+1}. EMELET ÉPÍTÉSE... (${FLOORS[idx].name})`);
-
-    animateFloorIn(idx, ()=>{
-        builtFloors++;
-        setTimeout(()=> buildNextFloor(idx+1, delay), delay*200);
-    });
+    const pct=3+Math.round((idx/FLOORS.length)*88);
+    setProgress(pct,`${idx+1}. EMELET  ·  ${FLOORS[idx].name}`);
+    animFloorIn(idx,()=> setTimeout(()=>buildFloor(idx+1,perFloor), perFloor*180));
 }
 
-function animateFloorIn(idx, onDone){
-    const fm=floorMeshes[idx];
+function setProgress(pct,txt){
+    document.getElementById('bp-fill').style.width=pct+'%';
+    document.getElementById('bp-dot').style.right=(100-pct)+'%';
+    document.getElementById('bp-text').textContent=txt;
+}
+
+function animFloorIn(idx,cb){
+    const fm=floorGroups[idx];
+    const targetY=BASE_Y+(idx+0.5)*FH;
+    fm.group.position.y=targetY+2.5;
+    fm.group.scale.set(1,0.01,1);
     fm.built=true;
 
-    // Emelet "kiesik felülről" és becsúszik a helyére
-    const targetY = BASE_Y+(idx+0.5)*FLOOR_H;
-    fm.group.position.y = targetY + 3;  // fentről indul
-    fm.group.scale.set(1,0.01,1);
-
-    const duration=900; // ms
-    const startTime=Date.now();
-
+    const dur=800, t0=Date.now();
     function step(){
-        const t=Math.min((Date.now()-startTime)/duration,1);
-        const ease=1-Math.pow(1-t,3); // easeOutCubic
-
-        fm.group.position.y = (targetY+3)*(1-ease) + targetY*ease;
-        fm.group.scale.y = ease;
-
-        // Glow fellobbanás
-        fm.glowMesh.material.opacity = Math.sin(ease*Math.PI)*0.15;
-
-        // Neon csík opacity
-        fm.glassMat.emissiveIntensity = 0.08 + Math.sin(ease*Math.PI)*0.25;
-
-        if(t<1){
-            requestAnimationFrame(step);
-        } else {
-            fm.group.position.y=targetY;
-            fm.group.scale.set(1,1,1);
-            fm.glassMat.emissiveIntensity=0.08;
-            if(onDone) onDone();
-        }
+        const t=Math.min((Date.now()-t0)/dur,1);
+        const e=easeOutCubic(t);
+        fm.group.position.y=(targetY+2.5)*(1-e)+targetY*e;
+        fm.group.scale.y=e;
+        // Flash glow
+        fm.glowMat.opacity=Math.sin(e*Math.PI)*0.18;
+        fm.glassMat.emissiveIntensity=0.04+Math.sin(e*Math.PI)*0.22;
+        if(t<1) requestAnimationFrame(step);
+        else{ fm.group.position.y=targetY; fm.group.scale.set(1,1,1); fm.glassMat.emissiveIntensity=0.04; fm.glowMat.opacity=0.01; if(cb) cb(); }
     }
     step();
 }
 
-// ── Antenna a tetején ──
-function buildAntenna(){
-    const topY = BASE_Y + FLOORS.length*FLOOR_H;
-
-    // Antenna rúd
-    const rodGeo=new THREE.CylinderGeometry(0.02,0.04,1.2,8);
-    const rodMat=new THREE.MeshBasicMaterial({color:0x88ccff,transparent:true,opacity:0.9});
-    const rod=new THREE.Mesh(rodGeo,rodMat);
-    rod.position.set(0, topY+0.6, 0);
-    rod.name='antenna';
-    rod.scale.y=0;
-    scene.add(rod);
-
-    // Antenna csúcs gömb
-    const tipGeo=new THREE.SphereGeometry(0.07,16,16);
-    const tipMat=new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0});
-    const tip=new THREE.Mesh(tipGeo,tipMat);
-    tip.position.set(0, topY+1.25, 0);
-    tip.name='antennaTip';
-    scene.add(tip);
-
-    // Antenna glow
-    const aGlow=new THREE.Mesh(
-        new THREE.SphereGeometry(0.25,16,16),
-        new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0,side:THREE.BackSide})
-    );
-    aGlow.position.copy(tip.position); aGlow.name='antennaGlow';
-    scene.add(aGlow);
-
-    // Animáció
-    const dur=1500, start=Date.now();
+function animAntenna(){
+    const rod=scene.getObjectByName('antRod');
+    const tip=scene.getObjectByName('antTip');
+    const glow=scene.getObjectByName('antGlow');
+    const dur=1600, t0=Date.now();
     function step(){
-        const t=Math.min((Date.now()-start)/dur,1);
-        const e=1-Math.pow(1-t,2);
-        rod.scale.y=e;
-        tipMat.opacity=e*0.95;
-        aGlow.material.opacity=e*0.2;
+        const t=Math.min((Date.now()-t0)/dur,1);
+        const e=easeOutCubic(t);
+        if(rod) rod.material.opacity=e*0.9;
+        if(tip) tip.material.opacity=e*0.95;
+        if(glow) glow.material.opacity=e*0.2;
         if(t<1) requestAnimationFrame(step);
     }
     step();
 }
 
-function updateBuildUI(pct, label){
-    document.getElementById('bp-bar').style.width=pct+'%';
-    document.getElementById('bp-floor').textContent=label;
+const easeOutCubic=t=>1-Math.pow(1-t,3);
+
+// ════════════════════════════════════════════════════════════
+// PANEL NAVIGÁCIÓ – mini kártyák
+// ════════════════════════════════════════════════════════════
+function buildFloorNav(){
+    const nav=document.getElementById('floor-nav');
+    nav.innerHTML='';
+    FLOORS.forEach((d,i)=>{
+        const card=document.createElement('div');
+        card.className='fn-card'; card.dataset.fi=i;
+        card.style.borderColor=d.col+'33';
+        card.innerHTML=`<div class="fn-num" style="color:${d.col}">0${d.n}</div><div class="fn-dot" style="background:${d.col};box-shadow:0 0 5px ${d.col}"></div><div class="fn-name">${d.name}</div>`;
+        card.onclick=()=>selectFloor(i);
+        nav.appendChild(card);
+    });
 }
+
+function selectFloor(idx){
+    if(buildPhase!=='done') return;
+    selectedFloor=idx;
+    updateFloorHighlight();
+    fillPanel(idx);
+    if(!panelOpen){ panelOpen=true; document.getElementById('proj-panel').classList.add('open'); document.getElementById('tap-hint').classList.remove('show'); }
+}
+
+function navFloor(dir){
+    const next=((selectedFloor+dir)+FLOORS.length)%FLOORS.length;
+    selectFloor(next);
+}
+
+function closePanel(){
+    panelOpen=false;
+    selectedFloor=-1;
+    document.getElementById('proj-panel').classList.remove('open');
+    document.querySelectorAll('.fn-card').forEach(c=>c.classList.remove('active'));
+    setTimeout(()=>{ if(buildPhase==='done') document.getElementById('tap-hint').classList.add('show'); },600);
+}
+
+function updateFloorHighlight(){
+    document.querySelectorAll('.fn-card').forEach((c,i)=>{
+        c.classList.toggle('active',i===selectedFloor);
+    });
+    // Scroll a mini kártyához
+    const cards=document.querySelectorAll('.fn-card');
+    if(cards[selectedFloor]) cards[selectedFloor].scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+}
+
+function fillPanel(idx){
+    const d=FLOORS[idx];
+    // CSS var frissítés az adott projekt színével
+    setVar('--p',d.col);
+    setVar('--pg',d.col+'55');
+    setVar('--pb',hexToRgba(d.col,0.07));
+
+    document.getElementById('pp-badge').textContent=`0${d.n}`;
+    document.getElementById('pp-name').textContent=d.name;
+    document.getElementById('pp-name').style.textShadow=`0 0 20px ${d.col}66`;
+    document.getElementById('pp-sub').textContent=d.sub;
+    document.getElementById('pp-sub').style.color=d.col;
+    document.getElementById('pp-desc').textContent=d.desc;
+
+    const tech=document.getElementById('pp-tech');
+    tech.innerHTML='';
+    d.tech.forEach(t=>{ const tag=document.createElement('div'); tag.className='tag'; tag.textContent=t; tech.appendChild(tag); });
+
+    d.stats.forEach((s,i)=>{ document.getElementById(`sv${i+1}`).textContent=s[0]; document.getElementById(`sl${i+1}`).textContent=s[1]; });
+}
+
+function setVar(n,v){ document.documentElement.style.setProperty(n,v); }
+function hexToRgba(hex,a){
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+}
+
+// ════════════════════════════════════════════════════════════
+// ADAPTÍV SZÍN – kamera háttér elemzés
+// ════════════════════════════════════════════════════════════
+function analyzeBackground(){
+    const video=document.getElementById('camera-bg');
+    if(!video.videoWidth||!sampleCtx) return;
+    sampleCtx.drawImage(video,0,0,64,36);
+    const data=sampleCtx.getImageData(16,8,32,20).data;
+    let r=0,g=0,b=0,n=0;
+    for(let i=0;i<data.length;i+=4){ r+=data[i]; g+=data[i+1]; b+=data[i+2]; n++; }
+    const rA=r/n/255, gA=g/n/255, bA=b/n/255;
+    const bright=0.299*rA+0.587*gA+0.114*bA;
+    const warm=rA-bA;
+    const sat=(() =>{ const mx=Math.max(rA,gA,bA),mn=Math.min(rA,gA,bA); return mx>0.01?(mx-mn)/mx:0; })();
+
+    let pH,sH,aH,mode;
+    if(bright>0.68){      pH='#0066ff'; sH='#cc00ff'; aH='#ff4400'; mode='DARK'; }
+    else if(bright<0.18){ pH='#00ffdd'; sH='#ff44ff'; aH='#ffdd00'; mode='NEON'; }
+    else if(warm>0.15){   pH='#00ddff'; sH='#0033ff'; aH='#00ffaa'; mode='COOL'; }
+    else if(warm<-0.12){  pH='#ffaa00'; sH='#ff6600'; aH='#ffee33'; mode='WARM'; }
+    else if(sat<0.12){    pH='#00cfff'; sH='#0044ff'; aH='#ff0066'; mode='CYBER'; }
+    else{
+        const h=((Math.atan2(Math.sqrt(3)*(gA-bA),2*rA-gA-bA)*180/Math.PI)+360)%360;
+        const ch=(h+180)%360;
+        pH=`hsl(${ch},100%,58%)`; sH=`hsl(${(ch+70)%360},80%,52%)`; aH=`hsl(${(ch+140)%360},100%,62%)`;
+        mode='AUTO';
+    }
+    palPT.set(pH); palST.set(sH); palAT.set(aH);
+
+    // CSS vars frissítés (ha nincs nyitott panel – nehogy a projekt szín elfedje)
+    if(!panelOpen){
+        setVar('--p',pH); setVar('--s',sH); setVar('--a',aH);
+        setVar('--pg',pH+'55'); setVar('--pb',hexToRgbaFromColor(palPT,0.07));
+    }
+    const badge=document.getElementById('adapt-badge');
+    if(badge){ badge.textContent=mode; badge.style.color=pH; }
+}
+
+function hexToRgbaFromColor(c,a){ return `rgba(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)},${a})`; }
+
+function applyAdaptColors(){
+    const sp=0.04;
+    lerpC(palP,palPT,sp); lerpC(palS,palST,sp); lerpC(palA,palAT,sp);
+
+    adaptMats.forEach(({mat,role,floorIdx})=>{
+        const tgt=role==='p'?palP:role==='s'?palS:palA;
+        // Ha ki van jelölve ez az emelet, a saját projekt szín dominál
+        if(floorIdx!==undefined && floorIdx===selectedFloor) return;
+        if(mat.color) lerpC(mat.color,tgt,sp);
+        if(mat.emissive) lerpC(mat.emissive,tgt,sp*0.5);
+    });
+}
+
+function lerpC(c,t,s){ c.r+=(t.r-c.r)*s; c.g+=(t.g-c.g)*s; c.b+=(t.b-c.b)*s; }
 
 // ════════════════════════════════════════════════════════════
 // ANIMÁCIÓ LOOP
 // ════════════════════════════════════════════════════════════
 function animate(){
     requestAnimationFrame(animate);
-    const t=Date.now()*0.001;
+    const t=Date.now()*.001;
 
-    // Kamera sima mozgás
-    camRotX+=(targetRotX-camRotX)*0.06;
-    camRotY+=(targetRotY-camRotY)*0.06;
-    zoomCurrent+=(zoomTarget-zoomCurrent)*0.1;
+    // Adaptív szín
+    if(t-lastSample>0.13){ lastSample=t; analyzeBackground(); }
+    applyAdaptColors();
 
-    const baseR=6/zoomCurrent;
-    camera.position.x=Math.sin(camRotY)*baseR;
-    camera.position.y=1.2+camRotX*baseR*0.5;
-    camera.position.z=Math.cos(camRotY)*baseR;
-    camera.lookAt(0,0.5,0);
+    // Kamera
+    cRotX+=(tRotX-cRotX)*0.06; cRotY+=(tRotY-cRotY)*0.06;
+    zoomC+=(zoomT-zoomC)*0.1;
+    const R=5.5/zoomC;
+    camera.position.set(Math.sin(cRotY)*R, 1+cRotX*R*0.4, Math.cos(cRotY)*R);
+    camera.lookAt(0,.8,0);
 
-    // Alap karikák forgása
-    const br=scene.getObjectByName('baseRing');
-    const r2=scene.getObjectByName('ring2');
-    if(br) br.rotation.z=t*0.4;
-    if(r2) r2.rotation.z=-t*0.25;
+    // Talaj karikák
+    ['r1','r2','r3'].forEach((n,i)=>{ const r=scene.getObjectByName(n); if(r) r.rotation.z=t*(0.35-i*0.08)*(i%2?-1:1); });
 
-    // Antenna glow pulzálás
-    const ag=scene.getObjectByName('antennaGlow');
-    if(ag) ag.material.opacity=0.1+Math.sin(t*3)*0.1;
-    const at=scene.getObjectByName('antennaTip');
-    if(at) at.material.opacity=0.7+Math.sin(t*4)*0.25;
+    // Antenna
+    const ag=scene.getObjectByName('antGlow'); if(ag) ag.material.opacity=0.08+Math.sin(t*3.5)*0.1;
+    const at=scene.getObjectByName('antTip');  if(at) at.material.opacity=0.7+Math.sin(t*4)*0.25;
 
-    // Emelet glow pulzálás + expand animáció
-    floorMeshes.forEach((fm,i)=>{
+    // Emelet animációk
+    floorGroups.forEach((fm,i)=>{
         if(!fm.built) return;
+        const baseY=BASE_Y+(i+0.5)*FH;
+        const isSel=(i===selectedFloor);
 
-        // Normál pulzálás
-        if(selectedFloor!==i){
-            fm.glassMat.emissiveIntensity=0.06+Math.sin(t*1.2+i*0.9)*0.04;
-            fm.glowMesh.material.opacity=0.02+Math.sin(t*1.5+i*0.7)*0.02;
-            // Expand visszaáll
-            if(fm.expandScale>1.0){
-                fm.expandScale=THREE.MathUtils.lerp(fm.expandScale,1.0,0.1);
-                fm.group.scale.x=fm.expandScale;
-                fm.group.scale.z=fm.expandScale;
-            }
+        if(isSel){
+            // Kiemelkedik és izzik
+            fm.glowMat.opacity=0.14+Math.sin(t*2.5)*0.08;
+            fm.glassMat.emissiveIntensity=0.28+Math.sin(t*3)*0.12;
+            fm.exScale=THREE.MathUtils.lerp(fm.exScale,1.08,0.07);
+            fm.exY=THREE.MathUtils.lerp(fm.exY,0.14,0.07);
         } else {
-            // Kijelölt emelet: izzik
-            fm.glassMat.emissiveIntensity=0.35+Math.sin(t*3)*0.15;
-            fm.glowMesh.material.opacity=0.18+Math.sin(t*2.5)*0.08;
-            fm.expandScale=THREE.MathUtils.lerp(fm.expandScale,1.12,0.08);
-            fm.group.scale.x=fm.expandScale;
-            fm.group.scale.z=fm.expandScale;
-            // Y-ban is kiemelkedik kicsit
-            const baseY=BASE_Y+(i+0.5)*FLOOR_H;
-            fm.group.position.y=THREE.MathUtils.lerp(fm.group.position.y, baseY+0.12, 0.08);
+            // Normál pulzálás
+            fm.glowMat.opacity=0.01+Math.sin(t*1.3+i*.7)*0.012;
+            fm.glassMat.emissiveIntensity=0.04+Math.sin(t*1.1+i*.9)*0.03;
+            fm.exScale=THREE.MathUtils.lerp(fm.exScale,1.0,0.08);
+            fm.exY=THREE.MathUtils.lerp(fm.exY,0.0,0.08);
         }
+        fm.group.scale.x=fm.exScale; fm.group.scale.z=fm.exScale;
+        fm.group.position.y=baseY+fm.exY;
     });
+
+    // Torony enyhe lebegés
+    if(towerGroup) towerGroup.position.y=Math.sin(t*0.4)*0.03;
 
     renderer.render(scene,camera);
 }
 
 // ════════════════════════════════════════════════════════════
-// KOPPINTÁS KEZELÉS
+// TOUCH + RAYCASTER
 // ════════════════════════════════════════════════════════════
 function onTap(x,y){
     if(buildPhase!=='done') return;
-    if(document.getElementById('proj-panel').classList.contains('open')) return;
-
     mouse.x=(x/window.innerWidth)*2-1;
     mouse.y=-(y/window.innerHeight)*2+1;
     raycaster.setFromCamera(mouse,camera);
-
-    const targets=floorMeshes.filter(f=>f.built).map(f=>f.glassMesh);
-    const hits=raycaster.intersectObjects(targets,false);
-
+    const meshes=floorGroups.filter(f=>f.built).map(f=>f.glass);
+    const hits=raycaster.intersectObjects(meshes,false);
     if(hits.length>0){
-        const fi=hits[0].object.userData.floorIndex;
+        const fi=hits[0].object.userData.fi;
         if(fi!==undefined) selectFloor(fi);
     }
 }
 
-function selectFloor(idx){
-    selectedFloor=idx;
-    const fm=floorMeshes[idx];
-    openPanel(idx);
-}
-
-function openPanel(idx){
-    const d=FLOORS[idx];
-
-    document.getElementById('pp-floor-badge').style.color=d.color;
-    document.getElementById('pp-floor-badge').style.borderColor=d.color+'55';
-    document.getElementById('pp-floor-badge').style.background=d.color+'18';
-    document.getElementById('pp-floor-badge').querySelector('.fl-num').textContent=`0${d.floor}`;
-    document.getElementById('pp-name').textContent=d.name;
-    document.getElementById('pp-name').style.color=d.color;
-    document.getElementById('pp-name').style.textShadow=`0 0 20px ${d.color}`;
-    document.getElementById('pp-sub').textContent=d.sub;
-    document.getElementById('pp-sub').style.color=d.color+'88';
-    document.getElementById('pp-desc').textContent=d.desc;
-
-    const techRow=document.getElementById('pp-tech');
-    techRow.innerHTML='';
-    d.tech.forEach(t=>{
-        const tag=document.createElement('div');
-        tag.className='tag'; tag.textContent=t;
-        tag.style.color=d.color;
-        tag.style.borderColor=d.color+'44';
-        tag.style.background=d.color+'12';
-        techRow.appendChild(tag);
-    });
-
-    d.stats.forEach((s,i)=>{
-        document.getElementById(`sv${i+1}`).textContent=s[0];
-        document.getElementById(`sv${i+1}`).style.color=d.color;
-        document.getElementById(`sl${i+1}`).textContent=s[1];
-    });
-
-    document.getElementById('proj-panel').classList.add('open');
-}
-
-function closePanel(){
-    document.getElementById('proj-panel').classList.remove('open');
-    // Emelet visszaáll
-    if(selectedFloor>=0){
-        const fm=floorMeshes[selectedFloor];
-        const baseY=BASE_Y+(selectedFloor+0.5)*FLOOR_H;
-        fm.group.position.y=baseY;
-        selectedFloor=-1;
-    }
-}
-
-// ════════════════════════════════════════════════════════════
-// GYRO
-// ════════════════════════════════════════════════════════════
-function setupGyro(){
-    if(typeof DeviceOrientationEvent==='undefined') return;
-    const enable=()=>{
-        window.addEventListener('deviceorientation',e=>{
-            if(e.beta===null) return;
-            gyroAvailable=true;
-            targetRotX=THREE.MathUtils.clamp((e.beta-75)*0.01,-0.6,0.6);
-            targetRotY=THREE.MathUtils.clamp(e.gamma*0.018,-Math.PI,Math.PI);
-        });
-    };
-    if(typeof DeviceOrientationEvent.requestPermission==='function'){
-        DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') enable(); }).catch(()=>{});
-    } else { enable(); }
-}
-
-// ════════════════════════════════════════════════════════════
-// TOUCH
-// ════════════════════════════════════════════════════════════
-let touchMoved=false;
 document.addEventListener('touchstart',e=>{
     touchMoved=false;
-    if(e.touches.length===1){ touchStartX=e.touches[0].clientX; touchStartY=e.touches[0].clientY; }
-    else if(e.touches.length===2){
-        pinchStartDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-        pinchStartScale=zoomTarget;
-    }
+    if(e.touches.length===1){ touchX=e.touches[0].clientX; touchY=e.touches[0].clientY; }
+    else if(e.touches.length===2){ pinchD0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); pinchZ0=zoomT; }
 },{passive:true});
 
 document.addEventListener('touchmove',e=>{
     touchMoved=true;
     if(e.touches.length===2){
         const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-        zoomTarget=Math.min(Math.max(pinchStartScale*(d/pinchStartDist),ZOOM_MIN),ZOOM_MAX);
-    } else if(e.touches.length===1 && !gyroAvailable){
-        targetRotY+=(e.touches[0].clientX-touchStartX)*0.004;
-        targetRotX+=(-e.touches[0].clientY+touchStartY)*0.003;
-        touchStartX=e.touches[0].clientX; touchStartY=e.touches[0].clientY;
+        zoomT=Math.min(Math.max(pinchZ0*(d/pinchD0),ZMIN),ZMAX);
+    } else if(e.touches.length===1&&!gyroAvail){
+        tRotY+=(e.touches[0].clientX-touchX)*.004;
+        tRotX+=(-e.touches[0].clientY+touchY)*.003;
+        touchX=e.touches[0].clientX; touchY=e.touches[0].clientY;
     }
 },{passive:true});
 
 document.addEventListener('touchend',e=>{
-    if(!touchMoved && e.changedTouches.length===1){
-        if(!e.target.closest('#proj-panel') && !e.target.closest('#pp-close'))
+    if(!touchMoved&&e.changedTouches.length===1){
+        if(!e.target.closest('#proj-panel')&&!e.target.closest('#pp-close-btn'))
             onTap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
     }
 },{passive:true});
 
-// Asztali klikk
 document.addEventListener('click',e=>{
-    if(e.target.closest('#proj-panel')||e.target.closest('#pp-close')||e.target.closest('#start-btn')) return;
+    if(e.target.closest('#proj-panel')||e.target.closest('#start-btn')) return;
     onTap(e.clientX,e.clientY);
 });
+
+// ════════════════════════════════════════════════════════════
+// GYRO
+// ════════════════════════════════════════════════════════════
+function setupGyro(){
+    if(typeof DeviceOrientationEvent==='undefined') return;
+    const en=()=>{
+        window.addEventListener('deviceorientation',e=>{
+            if(e.beta===null) return; gyroAvail=true;
+            tRotX=THREE.MathUtils.clamp((e.beta-72)*.01,-.7,.7);
+            tRotY=THREE.MathUtils.clamp(e.gamma*.016,-Math.PI,Math.PI);
+        });
+    };
+    if(typeof DeviceOrientationEvent.requestPermission==='function')
+        DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') en(); }).catch(()=>{});
+    else en();
+}
 </script>
 </body>
 </html>
