@@ -5,310 +5,155 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>KOVÁCS AI-GÁBOR // AR NÉVJEGY</title>
+    <title>KOVÁCS AI-GÁBOR // AR</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-
     <style>
-        :root {
-            --cyan: #00ffcc;
-            --purple: #8a2be2;
-            --red: #ff0055;
-            --dark: #020208;
-        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#000; overflow:hidden; width:100vw; height:100vh; font-family:'Share Tech Mono',monospace; touch-action:none; }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background: #000;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            font-family: 'Share Tech Mono', monospace;
-            touch-action: none;
-        }
-
-        /* Kamera háttér */
         #camera-bg {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: cover;
-            z-index: 0;
-            transform: scaleX(-1); /* tükrözés front cam esetén - hátsónál kikapcsoljuk JS-ből */
+            position:fixed; top:0; left:0; width:100%; height:100%;
+            object-fit:cover; z-index:0;
         }
-
-        /* Three.js canvas */
         #ar-canvas {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 10;
-            pointer-events: none;
+            position:fixed; top:0; left:0; width:100%; height:100%;
+            z-index:10; pointer-events:none;
         }
 
-        /* ── SPLASH KÉPERNYŐ ── */
+        /* ── SPLASH ── */
         #splash {
-            position: fixed;
-            inset: 0;
-            background: #000;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 24px;
-            transition: opacity 0.8s ease;
+            position:fixed; inset:0; background:#000; z-index:1000;
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px;
+            transition:opacity 0.8s ease;
         }
-        #splash.hidden { opacity: 0; pointer-events: none; }
-
+        #splash.hidden { opacity:0; pointer-events:none; }
         .splash-logo {
-            font-family: 'Orbitron', sans-serif;
-            font-size: clamp(22px, 6vw, 36px);
-            font-weight: 900;
-            color: var(--cyan);
-            text-align: center;
-            letter-spacing: 4px;
-            text-shadow: 0 0 30px var(--cyan), 0 0 60px #00ffcc44;
-            animation: titlePulse 2s ease-in-out infinite;
+            font-family:'Orbitron',sans-serif; font-size:clamp(24px,7vw,40px); font-weight:900;
+            color:#00ffcc; text-align:center; letter-spacing:5px;
+            animation:glow 2s ease-in-out infinite alternate;
         }
-        @keyframes titlePulse {
-            0%, 100% { text-shadow: 0 0 20px var(--cyan), 0 0 40px #00ffcc44; }
-            50% { text-shadow: 0 0 40px var(--cyan), 0 0 80px #00ffcc88, 0 0 120px #00ffcc22; }
+        @keyframes glow {
+            from { text-shadow:0 0 20px #00ffcc, 0 0 40px #00ffcc44; }
+            to   { text-shadow:0 0 50px #00ffcc, 0 0 100px #00ffcc88; }
         }
-
-        .splash-sub {
-            font-size: 11px;
-            color: #ffffff44;
-            letter-spacing: 3px;
-            text-align: center;
-        }
-
+        .splash-sub { font-size:10px; color:#ffffff33; letter-spacing:4px; text-align:center; }
         #start-btn {
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 13px;
-            letter-spacing: 4px;
-            color: var(--dark);
-            background: var(--cyan);
-            border: none;
-            padding: 16px 40px;
-            cursor: pointer;
-            text-transform: uppercase;
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.15s;
-            clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+            font-family:'Share Tech Mono',monospace; font-size:13px; letter-spacing:4px;
+            color:#000; background:#00ffcc; border:none; padding:18px 44px;
+            cursor:pointer; text-transform:uppercase; position:relative; overflow:hidden;
+            clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
         }
-        #start-btn:active { transform: scale(0.97); }
         #start-btn::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(90deg, transparent 0%, #ffffff44 50%, transparent 100%);
-            transform: translateX(-100%);
-            animation: shimmer 2s infinite;
+            content:''; position:absolute; inset:0;
+            background:linear-gradient(90deg,transparent,#fff6,transparent);
+            transform:translateX(-100%); animation:shimmer 2s infinite;
         }
-        @keyframes shimmer { to { transform: translateX(200%); } }
+        @keyframes shimmer { to { transform:translateX(200%); } }
+        .perm-note { font-size:9px; color:#ffffff22; letter-spacing:2px; text-align:center; max-width:240px; line-height:2; }
 
-        .permission-note {
-            font-size: 10px;
-            color: #ffffff22;
-            letter-spacing: 2px;
-            text-align: center;
-            max-width: 260px;
-            line-height: 1.8;
+        /* ── ADAPTIVE INDICATOR ── */
+        #color-indicator {
+            position:fixed; top:52px; right:16px; z-index:30;
+            display:flex; flex-direction:column; align-items:flex-end; gap:3px;
+            opacity:0; transition:opacity 1s ease 0.8s; pointer-events:none;
         }
+        #color-indicator.visible { opacity:1; }
+        .ci-label { font-size:7px; letter-spacing:2px; color:#ffffff22; }
+        #ci-swatch {
+            width:20px; height:20px;
+            clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+            transition:background 1.2s ease;
+            border:1px solid #ffffff22;
+        }
+        #ci-mode { font-size:7px; letter-spacing:1px; transition:color 1.2s ease; }
 
-        /* ── HUD RÉTEG ── */
+        /* ── HUD ── */
         #hud {
-            position: fixed;
-            inset: 0;
-            z-index: 20;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 1s ease 0.5s;
+            position:fixed; inset:0; z-index:20; pointer-events:none;
+            opacity:0; transition:opacity 1s ease 0.5s;
         }
-        #hud.visible { opacity: 1; }
+        #hud.visible { opacity:1; }
 
-        /* Sarokdíszek */
         .corner {
-            position: absolute;
-            width: 28px; height: 28px;
-            border-color: var(--cyan);
-            border-style: solid;
-            opacity: 0.6;
+            position:absolute; width:22px; height:22px;
+            border-style:solid; opacity:0.65;
+            transition:border-color 1.2s ease;
         }
-        .c-tl { top: 16px; left: 16px; border-width: 2px 0 0 2px; }
-        .c-tr { top: 16px; right: 16px; border-width: 2px 2px 0 0; }
-        .c-bl { bottom: 16px; left: 16px; border-width: 0 0 2px 2px; }
-        .c-br { bottom: 16px; right: 16px; border-width: 0 2px 2px 0; }
+        .c-tl { top:14px; left:14px; border-width:2px 0 0 2px; }
+        .c-tr { top:14px; right:14px; border-width:2px 2px 0 0; }
+        .c-bl { bottom:14px; left:14px; border-width:0 0 2px 2px; }
+        .c-br { bottom:14px; right:14px; border-width:0 2px 2px 0; }
 
-        /* Scanlaine */
         #scanline {
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-            box-shadow: 0 0 10px var(--cyan);
-            animation: scan 6s linear infinite;
-            opacity: 0.5;
+            position:absolute; top:0; left:0; right:0; height:2px;
+            animation:scan 5s linear infinite; opacity:0.4;
+            transition:background 1.2s ease, box-shadow 1.2s ease;
         }
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        @keyframes scan { 0%{top:0} 100%{top:100%} }
 
-        /* Felső státusz */
         #top-status {
-            position: absolute;
-            top: 20px; left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-            align-items: center;
+            position:absolute; top:18px; left:50%; transform:translateX(-50%);
+            display:flex; gap:16px; align-items:center;
         }
-        .stat {
-            font-size: 9px;
-            color: #00ffcc66;
-            letter-spacing: 2px;
-        }
-        .stat b { color: var(--cyan); }
+        .stat { font-size:9px; letter-spacing:2px; color:#ffffff44; }
+        .stat b { transition:color 1.2s ease; }
         .dot {
-            width: 5px; height: 5px;
-            background: var(--cyan);
-            border-radius: 50%;
-            animation: blink 1.5s step-start infinite;
-            box-shadow: 0 0 6px var(--cyan);
+            width:5px; height:5px; border-radius:50%;
+            animation:blink 1.5s step-start infinite;
+            transition:background 1.2s ease, box-shadow 1.2s ease;
         }
-        @keyframes blink { 50% { opacity: 0.1; } }
+        @keyframes blink { 50%{opacity:0.1} }
 
-        /* Interaktív gombok – alul */
+        /* ── BUTTONS ── */
         #action-bar {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 16px;
-            pointer-events: all;
+            position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+            display:flex; gap:10px; pointer-events:all;
         }
-
         .action-btn {
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 9px;
-            letter-spacing: 2px;
-            color: var(--cyan);
-            background: #00ffcc11;
-            border: 1px solid #00ffcc44;
-            padding: 10px 18px;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s;
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+            font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px;
+            border:1px solid; padding:10px 14px; cursor:pointer; text-transform:uppercase;
+            transition:color 1.2s ease, border-color 1.2s ease, background 1.2s ease, filter 0.2s;
+            backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+            clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
         }
-        .action-btn:active, .action-btn.active {
-            background: #00ffcc33;
-            border-color: var(--cyan);
-            color: #fff;
-            box-shadow: 0 0 16px #00ffcc44;
-        }
-        .action-btn.red { color: var(--red); border-color: #ff005544; background: #ff005511; }
-        .action-btn.red:active { background: #ff005533; box-shadow: 0 0 16px #ff005544; }
-        .action-btn.purple { color: var(--purple); border-color: #8a2be244; background: #8a2be211; }
-        .action-btn.purple:active { background: #8a2be233; box-shadow: 0 0 16px #8a2be244; }
+        .action-btn:active { filter:brightness(1.8); transform:scale(0.96); }
 
-        /* Info panel – tap után jelenik meg */
+        /* ── INFO PANEL ── */
         #info-panel {
-            position: absolute;
-            bottom: 110px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #000000cc;
-            border: 1px solid #00ffcc33;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 16px 24px;
-            min-width: 260px;
-            max-width: 90vw;
-            text-align: center;
-            clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
-            opacity: 0;
-            transform: translateX(-50%) translateY(10px);
-            transition: opacity 0.3s, transform 0.3s;
-            pointer-events: none;
+            position:absolute; bottom:100px; left:50%;
+            transform:translateX(-50%) translateY(10px);
+            backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+            padding:18px 28px; min-width:270px; max-width:88vw; text-align:center;
+            clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);
+            opacity:0; transition:opacity 0.3s, transform 0.3s, background 1.2s, border-color 1.2s;
+            pointer-events:none; border:1px solid;
         }
-        #info-panel.visible {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-        #info-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 11px;
-            color: var(--cyan);
-            letter-spacing: 3px;
-            margin-bottom: 8px;
-        }
-        #info-body {
-            font-size: 11px;
-            color: #ffffffaa;
-            letter-spacing: 1px;
-            line-height: 1.8;
-        }
+        #info-panel.visible { opacity:1; transform:translateX(-50%) translateY(0); }
+        #info-title { font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:4px; margin-bottom:10px; transition:color 1.2s; }
+        #info-body { font-size:11px; color:#ffffffbb; letter-spacing:1px; line-height:1.9; }
 
-        /* Gyro tipp */
-        #gyro-tip {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            pointer-events: none;
-            animation: fadeOutTip 3s ease 2s forwards;
-        }
-        @keyframes fadeOutTip { to { opacity: 0; } }
-        #gyro-tip p {
-            font-size: 11px;
-            color: #ffffff44;
-            letter-spacing: 3px;
-        }
-
-        /* Hiba üzenet */
+        /* ── ERROR ── */
         #error-msg {
-            position: fixed;
-            inset: 0;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            z-index: 2000;
-            background: #000000ee;
-            padding: 32px;
-            text-align: center;
+            position:fixed; inset:0; display:none; flex-direction:column;
+            align-items:center; justify-content:center; gap:16px;
+            z-index:2000; background:#000000ee; padding:32px; text-align:center;
         }
-        #error-msg.show { display: flex; }
-        #error-msg h2 {
-            font-family: 'Orbitron', sans-serif;
-            color: var(--red);
-            font-size: 16px;
-            letter-spacing: 3px;
-        }
-        #error-msg p {
-            color: #ffffff66;
-            font-size: 11px;
-            letter-spacing: 2px;
-            line-height: 2;
-            max-width: 300px;
-        }
+        #error-msg.show { display:flex; }
+        #error-msg h2 { font-family:'Orbitron',sans-serif; color:#ff0055; font-size:16px; letter-spacing:3px; }
+        #error-msg p { color:#ffffff66; font-size:11px; letter-spacing:2px; line-height:2; max-width:300px; }
     </style>
 </head>
 <body>
 
-<!-- Kamera videó háttér -->
 <video id="camera-bg" autoplay muted playsinline></video>
-
-<!-- Three.js AR canvas -->
 <canvas id="ar-canvas"></canvas>
 
-<!-- HUD -->
+<div id="color-indicator">
+    <div class="ci-label">ADAPTIVE</div>
+    <div id="ci-swatch"></div>
+    <div id="ci-mode">--</div>
+</div>
+
 <div id="hud">
     <div id="scanline"></div>
     <div class="corner c-tl"></div>
@@ -317,524 +162,529 @@
     <div class="corner c-br"></div>
 
     <div id="top-status">
-        <div class="dot"></div>
-        <div class="stat">AR <b>AKTÍV</b></div>
-        <div class="stat">CAM <b id="cam-label">HÁTSÓ</b></div>
-        <div class="stat" id="clock-stat">--:--</div>
-        <div class="dot"></div>
+        <div class="dot" id="dot1"></div>
+        <div class="stat">AR <b id="b-ar">AKTÍV</b></div>
+        <div class="stat">CAM <b id="b-cam">HÁTSÓ</b></div>
+        <div class="stat" id="b-clock">--:--</div>
+        <div class="dot" id="dot2"></div>
     </div>
 
-    <div id="gyro-tip"><p>// MOZGASD A TELEFONT //</p></div>
-
     <div id="info-panel">
-        <div id="info-title">INFO</div>
+        <div id="info-title"></div>
         <div id="info-body"></div>
     </div>
 
     <div id="action-bar">
-        <button class="action-btn red" onclick="showInfo('PORTFÓLIÓ', 'Egészségügyi AI projektek\nKórházi diagnózis rendszerek\nGenomika · MRI analízis\ngithub.com/kovacs-ai')">◈ PORTFÓLIÓ</button>
-        <button class="action-btn" onclick="showInfo('KAPCSOLAT', 'ai@kovacs.dev\n+36 XX XXX XXXX\nLinkedIn: kovacs-ai-gabor\nBudapest, Magyarország')">⬡ KAPCSOLAT</button>
-        <button class="action-btn purple" onclick="showInfo('GITHUB', '47 repository\nNeurális hálózatok\nPython · PyTorch · LangChain\ngithub.com/kovacs-ai')">◻ GITHUB</button>
+        <button class="action-btn" id="btn-p" onclick="showInfo('PORTFÓLIÓ','Egészségügyi AI projektek\nKórházi diagnózis rendszerek\nGenomika · MRI analízis\ngithub.com/kovacs-ai')">◈ PORTFÓLIÓ</button>
+        <button class="action-btn" id="btn-c" onclick="showInfo('KAPCSOLAT','ai@kovacs.dev\n+36 XX XXX XXXX\nLinkedIn: kovacs-ai-gabor\nBudapest, HU')">⬡ KAPCSOLAT</button>
+        <button class="action-btn" id="btn-g" onclick="showInfo('GITHUB','47 repository\nNeurális hálózatok\nPython · PyTorch · LangChain\ngithub.com/kovacs-ai')">◻ GITHUB</button>
     </div>
 </div>
 
-<!-- Splash képernyő -->
 <div id="splash">
     <div class="splash-logo">KOVÁCS<br>AI-GÁBOR</div>
     <div class="splash-sub">// LEAD AI ENGINEER · NEURAL ARCHITECT //</div>
     <button id="start-btn" onclick="startAR()">⬡ AR NÉVJEGY INDÍTÁSA</button>
-    <div class="permission-note">Kamera hozzáférés szükséges.<br>Az adatok nem kerülnek tárolásra.</div>
+    <div class="perm-note">Kamera hozzáférés szükséges.<br>Semmi nem kerül tárolásra.</div>
 </div>
 
-<!-- Hiba -->
 <div id="error-msg">
     <h2>// KAMERA HIBA</h2>
-    <p>A böngésző nem engedélyezte a kamera hozzáférést.<br><br>
-    Engedélyezd a kamerát a beállításokban,<br>majd töltsd újra az oldalt.<br><br>
-    iOS: Beállítások → Safari → Kamera → Engedélyezés</p>
+    <p>Engedélyezd a kamerát a böngésző beállításokban, majd töltsd újra az oldalt.<br><br>iOS: Beállítások → Safari → Kamera → Engedélyezés</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ═══════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 // GLOBÁLIS ÁLLAPOT
-// ═══════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 let scene, camera, renderer;
-let hologramGroup, nameGroup, ringGroup, particleSystem;
-let mouseX = 0, mouseY = 0;
-let targetRotX = 0, targetRotY = 0;
-let currentRotX = 0, currentRotY = 0;
-let gyroAvailable = false;
-let touchStartX = 0, touchStartY = 0;
-let infoTimer = null;
-let animFrameId;
+let hologramGroup, ringGroup;
+let targetRotX=0, targetRotY=0, currentRotX=0, currentRotY=0;
+let gyroAvailable=false, touchStartX=0, touchStartY=0;
+let infoTimer=null;
 
-// ═══════════════════════════════════════════════════
-// AR INDÍTÁS
-// ═══════════════════════════════════════════════════
+// Adaptív paletta – mindig ez vezérel MINDENT
+const palette = {
+    primary:   new THREE.Color(0x00ffcc),
+    secondary: new THREE.Color(0x8a2be2),
+    accent:    new THREE.Color(0xff0055),
+    textBg:    'rgba(0,10,20,0.82)',
+    textColor: '#00ffcc',
+    glowMult:  1.0,
+};
+const paletteLerped = {
+    primary:   new THREE.Color(0x00ffcc),
+    secondary: new THREE.Color(0x8a2be2),
+    accent:    new THREE.Color(0xff0055),
+};
+
+let managedMats = {};
+let textTexture = null;
+let sampleCanvas, sampleCtx, lastSample=0;
+
+// ════════════════════════════════════════════════════════
+// INDÍTÁS
+// ════════════════════════════════════════════════════════
 async function startAR() {
     try {
-        const constraints = {
-            video: {
-                facingMode: { ideal: 'environment' }, // hátsó kamera
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-            },
-            audio: false
-        };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} },
+            audio:false
+        });
         const video = document.getElementById('camera-bg');
         video.srcObject = stream;
 
-        // Ellenőrzés: tényleg hátsó kamera-e
-        const track = stream.getVideoTracks()[0];
-        const settings = track.getSettings();
-        if (settings.facingMode === 'user') {
-            video.style.transform = 'scaleX(-1)'; // front cam tükrözés
-            document.getElementById('cam-label').textContent = 'ELSŐ';
-        } else {
-            video.style.transform = 'none';
-        }
+        sampleCanvas = document.createElement('canvas');
+        sampleCanvas.width=64; sampleCanvas.height=36;
+        sampleCtx = sampleCanvas.getContext('2d',{willReadFrequently:true});
 
-        // Gyro kísérlet
         setupGyro();
-
-        // Three.js jelenet
         initThree();
         animate();
 
-        // HUD megjelenítés
         document.getElementById('hud').classList.add('visible');
+        document.getElementById('color-indicator').classList.add('visible');
 
-        // Splash eltüntetés
         const splash = document.getElementById('splash');
         splash.classList.add('hidden');
-        setTimeout(() => splash.style.display = 'none', 900);
+        setTimeout(()=> splash.style.display='none', 900);
 
-        // Óra
-        setInterval(() => {
-            const t = new Date().toTimeString().slice(0,5);
-            const el = document.getElementById('clock-stat');
-            if (el) el.textContent = t;
-        }, 1000);
+        setInterval(()=>{
+            const el = document.getElementById('b-clock');
+            if(el) el.textContent = new Date().toTimeString().slice(0,5);
+        },1000);
 
-    } catch (err) {
-        console.error('Kamera hiba:', err);
+    } catch(err) {
+        console.error(err);
         document.getElementById('error-msg').classList.add('show');
-        document.getElementById('splash').style.display = 'none';
+        document.getElementById('splash').style.display='none';
     }
 }
 
-// ═══════════════════════════════════════════════════
-// GYRO ÉRZÉKELŐ
-// ═══════════════════════════════════════════════════
-function setupGyro() {
-    if (typeof DeviceOrientationEvent !== 'undefined') {
-        // iOS 13+ engedélykérés
-        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission()
-                .then(state => {
-                    if (state === 'granted') enableGyro();
-                })
-                .catch(() => {});
-        } else {
-            enableGyro();
-        }
+// ════════════════════════════════════════════════════════
+// HÁTTÉRELEMZÉS – ~8x másodpercenként
+// ════════════════════════════════════════════════════════
+function analyzeBackground() {
+    const video = document.getElementById('camera-bg');
+    if (!video.videoWidth) return;
+
+    sampleCtx.drawImage(video, 0, 0, 64, 36);
+    const data = sampleCtx.getImageData(16, 8, 32, 20).data; // középső rész
+
+    let r=0,g=0,b=0,n=0;
+    for(let i=0;i<data.length;i+=4){ r+=data[i]; g+=data[i+1]; b+=data[i+2]; n++; }
+    const rA=r/n/255, gA=g/n/255, bA=b/n/255;
+
+    const brightness = 0.299*rA + 0.587*gA + 0.114*bA;
+    const warmth     = rA - bA;
+    const maxC=Math.max(rA,gA,bA), minC=Math.min(rA,gA,bA);
+    const sat = maxC>0.01 ? (maxC-minC)/maxC : 0;
+
+    let pCol, sCol, aCol, textBg, textColor, mode, swatch;
+
+    if (brightness > 0.70) {
+        // ── Nagyon VILÁGOS (fehér fal, monitor, nap) ──
+        // → Sötét, mély kontrasztos hologram
+        pCol='#0066ff'; sCol='#cc00ee'; aCol='#ff4400';
+        textBg='rgba(0,0,0,0.90)'; textColor='#44aaff';
+        mode='DARK'; swatch='#0066ff';
+        palette.glowMult=1.5;
+
+    } else if (brightness < 0.18) {
+        // ── Nagyon SÖTÉT (éjszaka, sötét szoba) ──
+        // → Élénk, erős neon – minden látszik
+        pCol='#00ffdd'; sCol='#ff44ff'; aCol='#ffdd00';
+        textBg='rgba(0,15,25,0.65)'; textColor='#00ffdd';
+        mode='NEON'; swatch='#00ffdd';
+        palette.glowMult=2.0;
+
+    } else if (warmth > 0.18) {
+        // ── MELEG háttér (fa, bőr, tégla, naplemente) ──
+        // → Hideg kontrasz: jeges kék/cyan domináns
+        pCol='#00ddff'; sCol='#0033ff'; aCol='#00ffaa';
+        textBg='rgba(0,4,18,0.88)'; textColor='#00ddff';
+        mode='COOL'; swatch='#00ddff';
+        palette.glowMult=1.3;
+
+    } else if (warmth < -0.12) {
+        // ── HIDEG háttér (kék ég, kék fal, vízfelület) ──
+        // → Meleg arany/narancs kontrasz
+        pCol='#ffaa00'; sCol='#ff6600'; aCol='#ffee33';
+        textBg='rgba(18,6,0,0.88)'; textColor='#ffaa00';
+        mode='WARM'; swatch='#ffaa00';
+        palette.glowMult=1.2;
+
+    } else if (sat < 0.12) {
+        // ── SZÜRKE/SEMLEGES háttér ──
+        // → Teljes cyberpunk (eredeti paletta)
+        pCol='#00ffcc'; sCol='#8a2be2'; aCol='#ff0055';
+        textBg='rgba(0,10,20,0.82)'; textColor='#00ffcc';
+        mode='CYBER'; swatch='#00ffcc';
+        palette.glowMult=1.0;
+
+    } else {
+        // ── VEGYES – komplementer szín logika ──
+        const hue = Math.atan2(Math.sqrt(3)*(gA-bA), 2*rA-gA-bA)*180/Math.PI;
+        const ch = ((hue+180)%360+360)%360;
+        pCol=`hsl(${ch},100%,58%)`;
+        sCol=`hsl(${(ch+70)%360},80%,52%)`;
+        aCol=`hsl(${(ch+140)%360},100%,62%)`;
+        textBg=`rgba(${Math.round(rA*8)},${Math.round(gA*8)},${Math.round(bA*8)},0.85)`;
+        textColor=`hsl(${ch},100%,68%)`;
+        mode='AUTO'; swatch=pCol;
+        palette.glowMult=1.3;
     }
+
+    palette.primary.set(pCol);
+    palette.secondary.set(sCol);
+    palette.accent.set(aCol);
+    palette.textBg = textBg;
+    palette.textColor = textColor;
+
+    document.getElementById('ci-swatch').style.background = swatch;
+    document.getElementById('ci-mode').style.color = swatch;
+    document.getElementById('ci-mode').textContent = mode+' MODE';
+
+    // Szöveg újrarajzolás
+    if(textTexture) redrawText();
 }
 
-function enableGyro() {
-    let lastBeta = null, lastGamma = null;
-    window.addEventListener('deviceorientation', (e) => {
-        if (e.beta === null) return;
-        gyroAvailable = true;
-        const beta = e.beta;   // -180 to 180 (elő-hátra dőlés)
-        const gamma = e.gamma; // -90 to 90 (oldal dőlés)
-
-        // Normalizálás: telefon függőlegesen tartva = 0
-        targetRotX = THREE.MathUtils.clamp((beta - 80) * 0.015, -0.6, 0.6);
-        targetRotY = THREE.MathUtils.clamp(gamma * 0.02, -0.8, 0.8);
-    });
-}
-
-// ═══════════════════════════════════════════════════
-// TOUCH VEZÉRLÉS (gyro nélkül)
-// ═══════════════════════════════════════════════════
-document.addEventListener('touchstart', (e) => {
-    if (e.target.closest('#action-bar') || e.target.closest('#info-panel')) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-}, { passive: true });
-
-document.addEventListener('touchmove', (e) => {
-    if (e.target.closest('#action-bar')) return;
-    if (gyroAvailable) return; // gyro vezérel, touch nem kell
-    const dx = e.touches[0].clientX - touchStartX;
-    const dy = e.touches[0].clientY - touchStartY;
-    targetRotY = THREE.MathUtils.clamp(dx * 0.004, -1.2, 1.2);
-    targetRotX = THREE.MathUtils.clamp(dy * 0.003, -0.8, 0.8);
-}, { passive: true });
-
-// ═══════════════════════════════════════════════════
-// THREE.JS JELENET INIT
-// ═══════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// THREE.JS INIT
+// ════════════════════════════════════════════════════════
 function initThree() {
     const canvas = document.getElementById('ar-canvas');
-    const W = window.innerWidth;
-    const H = window.innerHeight;
+    const W=window.innerWidth, H=window.innerHeight;
 
-    // Renderer – átlátszó háttér (kamera látszik alatta)
-    renderer = new THREE.WebGLRenderer({
-        canvas,
-        alpha: true,
-        antialias: true,
-        premultipliedAlpha: false
-    });
-    renderer.setSize(W, H);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 0); // teljesen átlátszó
+    renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true, premultipliedAlpha:false });
+    renderer.setSize(W,H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setClearColor(0x000000,0);
 
-    // Jelenet
-    scene = new THREE.Scene();
+    scene  = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(60,W/H,0.1,100);
+    camera.position.set(0,0,5);
 
-    // Kamera
-    camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 100);
-    camera.position.set(0, 0, 5);
+    scene.add(new THREE.AmbientLight(0x112233, 0.9));
+    const l1=new THREE.PointLight(0xffffff,2,12); l1.position.set(-2,2,3); scene.add(l1);
+    const l2=new THREE.PointLight(0xffffff,1.5,10); l2.position.set(2,-1,2); scene.add(l2);
 
-    // Fények
-    scene.add(new THREE.AmbientLight(0x001122, 0.8));
-    const cyanLight = new THREE.PointLight(0x00ffcc, 2, 10);
-    cyanLight.position.set(-2, 2, 3);
-    scene.add(cyanLight);
-    const purpleLight = new THREE.PointLight(0x8a2be2, 1.5, 10);
-    purpleLight.position.set(2, -1, 2);
-    scene.add(purpleLight);
-    const redLight = new THREE.PointLight(0xff0055, 1, 8);
-    redLight.position.set(0, -2, 1);
-    scene.add(redLight);
-
-    // Fő csoport (ez fog dőlni gyróval)
     hologramGroup = new THREE.Group();
     scene.add(hologramGroup);
 
     buildHologram();
     buildParticles();
 
-    // Resize
-    window.addEventListener('resize', () => {
-        const W = window.innerWidth, H = window.innerHeight;
-        camera.aspect = W / H;
-        camera.updateProjectionMatrix();
-        renderer.setSize(W, H);
+    window.addEventListener('resize',()=>{
+        const W=window.innerWidth,H=window.innerHeight;
+        camera.aspect=W/H; camera.updateProjectionMatrix();
+        renderer.setSize(W,H);
     });
 }
 
-// ═══════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 // HOLOGRAM ÉPÍTÉS
-// ═══════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 function buildHologram() {
-    // ── Külső forgó gyűrűk ──
+    const p=palette.primary, s=palette.secondary, a=palette.accent;
+
+    // ── Gyűrűk ──
     ringGroup = new THREE.Group();
     hologramGroup.add(ringGroup);
 
-    const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: false, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
-    const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x8a2be2, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
-    const ringMat3 = new THREE.MeshBasicMaterial({ color: 0xff0055, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+    const m1=new THREE.MeshBasicMaterial({color:p.clone(),transparent:true,opacity:0.55,side:THREE.DoubleSide});
+    const m2=new THREE.MeshBasicMaterial({color:s.clone(),transparent:true,opacity:0.38,side:THREE.DoubleSide});
+    const m3=new THREE.MeshBasicMaterial({color:a.clone(),transparent:true,opacity:0.28,side:THREE.DoubleSide});
 
-    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.012, 16, 120), ringMat1);
-    ring1.rotation.x = Math.PI / 2;
-    ringGroup.add(ring1);
+    const r1=new THREE.Mesh(new THREE.TorusGeometry(2.2,0.014,16,120),m1); r1.rotation.x=Math.PI/2;
+    const r2=new THREE.Mesh(new THREE.TorusGeometry(1.8,0.009,16,100),m2); r2.rotation.x=Math.PI*0.4; r2.rotation.z=Math.PI*0.2;
+    const r3=new THREE.Mesh(new THREE.TorusGeometry(1.5,0.007,16,80),m3); r3.rotation.y=Math.PI*0.3;
+    ringGroup.add(r1,r2,r3);
+    managedMats.ring1=m1; managedMats.ring2=m2; managedMats.ring3=m3;
 
-    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.008, 16, 100), ringMat2);
-    ring2.rotation.x = Math.PI * 0.4;
-    ring2.rotation.z = Math.PI * 0.2;
-    ringGroup.add(ring2);
-
-    const ring3 = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.006, 16, 80), ringMat3);
-    ring3.rotation.y = Math.PI * 0.3;
-    ringGroup.add(ring3);
-
-    // Kis gyűrű szegmensek (tick marks)
-    for (let i = 0; i < 24; i++) {
-        const angle = (i / 24) * Math.PI * 2;
-        const seg = new THREE.Mesh(
-            new THREE.BoxGeometry(0.04, 0.001, i % 6 === 0 ? 0.15 : 0.06),
-            new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: i % 6 === 0 ? 0.9 : 0.4 })
-        );
-        seg.position.set(Math.cos(angle) * 2.2, 0, Math.sin(angle) * 2.2);
-        seg.lookAt(0, 0, 0);
-        seg.rotation.y += Math.PI / 2;
-        ring1.add(seg);
+    // Tick jelek
+    for(let i=0;i<24;i++){
+        const ang=(i/24)*Math.PI*2;
+        const tm=new THREE.MeshBasicMaterial({color:p.clone(),transparent:true,opacity:i%6===0?0.9:0.35});
+        const seg=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.001,i%6===0?0.16:0.07),tm);
+        seg.position.set(Math.cos(ang)*2.2,0,Math.sin(ang)*2.2);
+        seg.lookAt(0,0,0); seg.rotation.y+=Math.PI/2;
+        r1.add(seg);
+        if(!managedMats.ticks) managedMats.ticks=[];
+        managedMats.ticks.push(tm);
     }
 
-    // ── Középső névjegy lap ──
-    nameGroup = new THREE.Group();
-    hologramGroup.add(nameGroup);
+    // ── Kártya ──
+    const cardMat=new THREE.MeshPhongMaterial({color:0x000d1a,emissive:0x000510,transparent:true,opacity:0.75,shininess:200});
+    const card=new THREE.Mesh(new THREE.BoxGeometry(3.3,1.9,0.04),cardMat);
+    hologramGroup.add(card); managedMats.card=cardMat;
 
-    // Névjegy alaplap (vékony box) – holografikus
-    const cardGeo = new THREE.BoxGeometry(3.2, 1.8, 0.04);
-    const cardMat = new THREE.MeshPhongMaterial({
-        color: 0x001122,
-        emissive: 0x001122,
-        transparent: true,
-        opacity: 0.55,
-        shininess: 120,
-        specular: 0x00ffcc
-    });
-    const card = new THREE.Mesh(cardGeo, cardMat);
-    nameGroup.add(card);
+    const edgeMat=new THREE.LineBasicMaterial({color:p.clone(),transparent:true,opacity:0.9});
+    hologramGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(3.32,1.92,0.045)),edgeMat));
+    managedMats.edges=edgeMat;
 
-    // Keret élek – wireframe box
-    const edgesGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(3.22, 1.82, 0.045));
-    const edgesMat = new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.8 });
-    const edges = new THREE.LineSegments(edgesGeo, edgesMat);
-    nameGroup.add(edges);
+    const lineMat=new THREE.LineBasicMaterial({color:p.clone(),transparent:true,opacity:0.3});
+    hologramGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.5,0.28,0.026),new THREE.Vector3(1.5,0.28,0.026)]),lineMat));
+    managedMats.divLine=lineMat;
 
-    // Belső díszítő vonal (vízszintes)
-    const lineMat = new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.4 });
-    const linePoints = [new THREE.Vector3(-1.4, 0.25, 0.025), new THREE.Vector3(1.4, 0.25, 0.025)];
-    const lineGeo = new THREE.BufferGeometry().setFromPoints(linePoints);
-    nameGroup.add(new THREE.Line(lineGeo, lineMat));
-
-    // Sarokdíszek a kártyán
-    [[1.4, 0.8], [-1.4, 0.8], [1.4, -0.8], [-1.4, -0.8]].forEach(([x, y]) => {
-        const corner = new THREE.Group();
-        corner.position.set(x, y, 0.025);
-        const s = x > 0 ? 1 : -1;
-        const sy = y > 0 ? 1 : -1;
-        const h = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.012, 0.001), new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.8 }));
-        h.position.x = -s * 0.09;
-        const v = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.18, 0.001), new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.8 }));
-        v.position.y = -sy * 0.09;
-        corner.add(h, v);
-        nameGroup.add(corner);
+    // Sarkok
+    [[1.5,0.9],[-1.5,0.9],[1.5,-0.9],[-1.5,-0.9]].forEach(([x,y])=>{
+        const sx=x>0?1:-1,sy=y>0?1:-1;
+        const cm=new THREE.MeshBasicMaterial({color:p.clone(),transparent:true,opacity:0.85});
+        const g2=new THREE.Group(); g2.position.set(x,y,0.027);
+        g2.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.2,0.013,0.001),cm),{position:new THREE.Vector3(-sx*0.1,0,0)}));
+        g2.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.013,0.2,0.001),cm.clone()),{position:new THREE.Vector3(0,-sy*0.1,0)}));
+        hologramGroup.add(g2);
+        if(!managedMats.corners) managedMats.corners=[];
+        managedMats.corners.push(cm);
     });
 
-    // ── Szöveg: Canvas textúra alapú ──
-    addTextureText(nameGroup);
-
-    // ── Lebegő hologram gömb felül ──
-    const sphereGeo = new THREE.SphereGeometry(0.35, 32, 32);
-    const sphereMat = new THREE.MeshPhongMaterial({
-        color: 0x00ffcc,
-        emissive: 0x00ffcc,
-        emissiveIntensity: 0.3,
-        transparent: true,
-        opacity: 0.15,
-        wireframe: false,
-        shininess: 200
-    });
-    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-    sphere.position.set(0, 1.55, 0);
-    sphere.name = 'floatSphere';
-    hologramGroup.add(sphere);
-
-    // Gömb wireframe
-    const sphereWire = new THREE.Mesh(
-        new THREE.SphereGeometry(0.36, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true, transparent: true, opacity: 0.3 })
+    // ── Szöveg textúra ──
+    const tc=document.createElement('canvas'); tc.width=1024; tc.height=512;
+    const tctx=tc.getContext('2d');
+    drawText(tctx);
+    textTexture=new THREE.CanvasTexture(tc);
+    const txtPlane=new THREE.Mesh(
+        new THREE.PlaneGeometry(3.18,1.78),
+        new THREE.MeshBasicMaterial({map:textTexture,transparent:true,opacity:1})
     );
-    sphereWire.position.copy(sphere.position);
-    sphereWire.name = 'floatSphereWire';
-    hologramGroup.add(sphereWire);
+    txtPlane.position.z=0.027;
+    hologramGroup.add(txtPlane);
 
-    // Ikosaéder a gömb körül
-    const ico = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(0.5, 0),
-        new THREE.MeshBasicMaterial({ color: 0x8a2be2, wireframe: true, transparent: true, opacity: 0.4 })
-    );
-    ico.position.copy(sphere.position);
-    ico.name = 'floatIco';
-    hologramGroup.add(ico);
+    // ── Lebegő gömb ──
+    const spM=new THREE.MeshPhongMaterial({color:p.clone(),emissive:p.clone(),emissiveIntensity:0.35,transparent:true,opacity:0.18,shininess:300});
+    const sp=new THREE.Mesh(new THREE.SphereGeometry(0.36,32,32),spM); sp.position.set(0,1.62,0); sp.name='sp';
+    hologramGroup.add(sp); managedMats.sphere=spM;
 
-    // ── Adatoszlopok (skill vizualizáció) alul ──
-    const skills = [0.92, 0.88, 0.95, 0.80, 0.97];
-    const skillColors = [0x00ffcc, 0x8a2be2, 0x00ffcc, 0xff0055, 0x00ffcc];
-    skills.forEach((val, i) => {
-        const h = val * 0.8;
-        const bar = new THREE.Mesh(
-            new THREE.BoxGeometry(0.1, h, 0.1),
-            new THREE.MeshPhongMaterial({ color: skillColors[i], emissive: skillColors[i], emissiveIntensity: 0.5, transparent: true, opacity: 0.6 })
-        );
-        bar.position.set(-1.0 + i * 0.5, -1.4 - h / 2, 0.025);
-        bar.name = `bar${i}`;
-        hologramGroup.add(bar);
+    const wM=new THREE.MeshBasicMaterial({color:p.clone(),wireframe:true,transparent:true,opacity:0.32});
+    const w2=new THREE.Mesh(new THREE.SphereGeometry(0.37,16,16),wM); w2.position.copy(sp.position); w2.name='sw';
+    hologramGroup.add(w2); managedMats.wire=wM;
+
+    const iM=new THREE.MeshBasicMaterial({color:s.clone(),wireframe:true,transparent:true,opacity:0.42});
+    const ic=new THREE.Mesh(new THREE.IcosahedronGeometry(0.52,0),iM); ic.position.copy(sp.position); ic.name='si';
+    hologramGroup.add(ic); managedMats.ico=iM;
+
+    // ── Skill bárok ──
+    const skills=[0.92,0.88,0.95,0.80,0.97];
+    managedMats.bars=[];
+    skills.forEach((v,i)=>{
+        const col=i%2===0?p.clone():s.clone();
+        const bm=new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:0.55,transparent:true,opacity:0.65});
+        const h2=v*0.95;
+        const bar=new THREE.Mesh(new THREE.BoxGeometry(0.11,h2,0.11),bm);
+        bar.position.set(-1.05+i*0.53,-1.4-h2/2,0.027); bar.name=`br${i}`;
+        hologramGroup.add(bar); managedMats.bars.push(bm);
     });
-
-    // Data stream vonalak
-    for (let i = 0; i < 6; i++) {
-        const pts = [];
-        for (let j = 0; j < 20; j++) pts.push(new THREE.Vector3((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 2 - 1));
-        const streamGeo = new THREE.BufferGeometry().setFromPoints(pts);
-        const streamMat = new THREE.LineBasicMaterial({ color: i % 2 === 0 ? 0x00ffcc : 0x8a2be2, transparent: true, opacity: 0.06 });
-        hologramGroup.add(new THREE.Line(streamGeo, streamMat));
-    }
 }
 
-// ── Canvas szöveg textúra ──
-function addTextureText(group) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
+// ── Szöveg rajzolás ──
+function drawText(ctx) {
+    const bg=palette.textBg, col=palette.textColor;
+    const sec='#'+palette.secondary.getHexString();
+    const acc='#'+palette.accent.getHexString();
+
+    ctx.clearRect(0,0,1024,512);
 
     // Háttér
-    ctx.clearRect(0, 0, 1024, 512);
+    ctx.fillStyle=bg;
+    rrect(ctx,6,6,1012,500,10); ctx.fill();
 
-    // Fő név
-    ctx.font = 'bold 72px Orbitron, monospace';
-    ctx.fillStyle = '#00ffcc';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = '#00ffcc';
-    ctx.shadowBlur = 20;
-    ctx.fillText('KOVÁCS AI-GÁBOR', 512, 160);
+    // Fő cím – nagy, erős árnyék
+    ctx.font='bold 66px Orbitron,monospace';
+    ctx.fillStyle=col; ctx.textAlign='center';
+    ctx.shadowColor=col; ctx.shadowBlur=22;
+    ctx.fillText('KOVÁCS AI-GÁBOR',512,140);
 
     // Alcím
-    ctx.font = '28px "Share Tech Mono", monospace';
-    ctx.fillStyle = '#8a2be2cc';
-    ctx.shadowColor = '#8a2be2';
-    ctx.shadowBlur = 10;
-    ctx.fillText('// LEAD AI ENGINEER · NEURAL ARCHITECT //', 512, 220);
+    ctx.font='23px "Share Tech Mono",monospace';
+    ctx.fillStyle=sec; ctx.shadowColor=sec; ctx.shadowBlur=10;
+    ctx.fillText('// LEAD AI ENGINEER  ·  NEURAL ARCHITECT //',512,195);
 
     // Szeparátor
+    ctx.shadowBlur=0;
+    const gr=ctx.createLinearGradient(80,0,944,0);
+    gr.addColorStop(0,'transparent'); gr.addColorStop(0.3,col+'99');
+    gr.addColorStop(0.7,col+'99'); gr.addColorStop(1,'transparent');
+    ctx.strokeStyle=gr; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(80,222); ctx.lineTo(944,222); ctx.stroke();
+
+    // Adatok
+    ctx.font='21px "Share Tech Mono",monospace';
+    ctx.fillStyle=col+'cc'; ctx.shadowColor=col; ctx.shadowBlur=5;
+    ctx.fillText('ai@kovacs.dev   ·   Budapest, HU   ·   +36 XX XXX XXXX',512,295);
+
+    ctx.font='17px "Share Tech Mono",monospace';
+    ctx.fillStyle=col+'66'; ctx.shadowBlur=2;
+    ctx.fillText('github.com/kovacs-ai   ·   linkedin.com/in/kovacs-ai-gabor',512,342);
+
+    ctx.font='bold 14px "Share Tech Mono",monospace';
+    ctx.fillStyle=acc+'bb'; ctx.shadowColor=acc; ctx.shadowBlur=8;
+    ctx.fillText('[ HEALTH AI · LLM · PYTORCH · NEURAL NETWORKS ]',512,400);
+}
+
+function redrawText() {
+    const c=textTexture.image, ctx=c.getContext('2d');
+    drawText(ctx); textTexture.needsUpdate=true;
+}
+
+function rrect(ctx,x,y,w,h,r){
     ctx.beginPath();
-    ctx.moveTo(100, 250); ctx.lineTo(924, 250);
-    ctx.strokeStyle = '#00ffcc44';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Adatok alul
-    ctx.font = '22px "Share Tech Mono", monospace';
-    ctx.fillStyle = '#ffffff66';
-    ctx.shadowBlur = 0;
-    ctx.fillText('ai@kovacs.dev   ·   Budapest, HU   ·   +36 XX XXX XXXX', 512, 310);
-
-    ctx.font = '18px "Share Tech Mono", monospace';
-    ctx.fillStyle = '#00ffcc44';
-    ctx.fillText('github.com/kovacs-ai   ·   linkedin.com/in/kovacs-ai-gabor', 512, 355);
-
-    // Kis badge
-    ctx.font = 'bold 16px "Share Tech Mono", monospace';
-    ctx.fillStyle = '#ff005588';
-    ctx.fillText('[ HEALTH AI · LLM · NEURAL NETWORKS · PYTORCH ]', 512, 410);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    const plane = new THREE.Mesh(
-        new THREE.PlaneGeometry(3.1, 1.7),
-        new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.95 })
-    );
-    plane.position.z = 0.025;
-    group.add(plane);
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+    ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+    ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+    ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
 }
 
-// ═══════════════════════════════════════════════════
-// RÉSZECSKE RENDSZER
-// ═══════════════════════════════════════════════════
-function buildParticles() {
-    const count = 120;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-
-    const palette = [[0, 1, 0.8], [0.54, 0.17, 0.89], [1, 0, 0.33]];
-
-    for (let i = 0; i < count; i++) {
-        positions[i * 3]     = (Math.random() - 0.5) * 10;
-        positions[i * 3 + 1] = (Math.random() - 0.5) * 7;
-        positions[i * 3 + 2] = (Math.random() - 0.5) * 5 - 2;
-        const c = palette[Math.floor(Math.random() * 3)];
-        colors[i * 3] = c[0];
-        colors[i * 3 + 1] = c[1];
-        colors[i * 3 + 2] = c[2];
+// ── Részecskék ──
+function buildParticles(){
+    const cnt=130, pos=new Float32Array(cnt*3), col=new Float32Array(cnt*3);
+    for(let i=0;i<cnt;i++){
+        pos[i*3]=(Math.random()-0.5)*11;
+        pos[i*3+1]=(Math.random()-0.5)*8;
+        pos[i*3+2]=(Math.random()-0.5)*5-2;
+        col[i*3]=0; col[i*3+1]=1; col[i*3+2]=0.8;
     }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    particleSystem = new THREE.Points(geo, new THREE.PointsMaterial({
-        size: 0.04,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.7,
-        sizeAttenuation: true
-    }));
-    scene.add(particleSystem);
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+    const mat=new THREE.PointsMaterial({size:0.045,vertexColors:true,transparent:true,opacity:0.6,sizeAttenuation:true});
+    const ps=new THREE.Points(geo,mat); ps.name='pts'; scene.add(ps);
+    managedMats.particles=mat;
 }
 
-// ═══════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// SZÍN LERP + ANYAG FRISSÍTÉS
+// ════════════════════════════════════════════════════════
+function lerpC(cur,tgt,t){ cur.r+=(tgt.r-cur.r)*t; cur.g+=(tgt.g-cur.g)*t; cur.b+=(tgt.b-cur.b)*t; }
+
+function applyColors(){
+    const sp=0.04;
+    lerpC(paletteLerped.primary,   palette.primary,   sp);
+    lerpC(paletteLerped.secondary, palette.secondary, sp);
+    lerpC(paletteLerped.accent,    palette.accent,    sp);
+
+    const p=paletteLerped.primary, s=paletteLerped.secondary, a=paletteLerped.accent;
+    const gi=palette.glowMult;
+
+    if(managedMats.ring1){ managedMats.ring1.color.copy(p); }
+    if(managedMats.ring2){ managedMats.ring2.color.copy(s); }
+    if(managedMats.ring3){ managedMats.ring3.color.copy(a); }
+    if(managedMats.ticks) managedMats.ticks.forEach(m=>m.color.copy(p));
+    if(managedMats.edges) managedMats.edges.color.copy(p);
+    if(managedMats.divLine) managedMats.divLine.color.copy(p);
+    if(managedMats.corners) managedMats.corners.forEach(m=>m.color.copy(p));
+    if(managedMats.sphere){ managedMats.sphere.color.copy(p); managedMats.sphere.emissive.copy(p); managedMats.sphere.emissiveIntensity=0.3*gi; }
+    if(managedMats.wire) managedMats.wire.color.copy(p);
+    if(managedMats.ico)  managedMats.ico.color.copy(s);
+    if(managedMats.bars) managedMats.bars.forEach((m,i)=>{ const c2=i%2===0?p:s; m.color.copy(c2); m.emissive.copy(c2); m.emissiveIntensity=0.45*gi; });
+
+    // CSS HUD frissítés
+    const hex='#'+p.getHexString();
+    const shex='#'+s.getHexString();
+    const ahex='#'+a.getHexString();
+
+    document.querySelectorAll('.corner').forEach(el=>el.style.borderColor=hex);
+    const sl=document.getElementById('scanline');
+    sl.style.background=`linear-gradient(90deg,transparent,${hex},transparent)`;
+    sl.style.boxShadow=`0 0 8px ${hex}`;
+    document.querySelectorAll('.dot').forEach(el=>{ el.style.background=hex; el.style.boxShadow=`0 0 6px ${hex}`; });
+    document.querySelectorAll('.stat b').forEach(el=>el.style.color=hex);
+
+    // Gombok
+    [['btn-p',ahex],['btn-c',hex],['btn-g',shex]].forEach(([id,col])=>{
+        const el=document.getElementById(id); if(!el) return;
+        el.style.color=col; el.style.borderColor=col+'55'; el.style.background=col+'16';
+    });
+
+    // Info panel
+    const ip=document.getElementById('info-panel');
+    ip.style.borderColor=hex+'44'; ip.style.background=palette.textBg;
+    document.getElementById('info-title').style.color=hex;
+}
+
+// ════════════════════════════════════════════════════════
 // ANIMÁCIÓ LOOP
-// ═══════════════════════════════════════════════════
-function animate() {
-    animFrameId = requestAnimationFrame(animate);
-    const t = Date.now() * 0.001;
+// ════════════════════════════════════════════════════════
+function animate(){
+    requestAnimationFrame(animate);
+    const t=Date.now()*0.001;
 
-    // Sima követés
-    currentRotX += (targetRotX - currentRotX) * 0.08;
-    currentRotY += (targetRotY - currentRotY) * 0.08;
+    if(t-lastSample>0.13){ lastSample=t; analyzeBackground(); }
 
-    if (hologramGroup) {
-        hologramGroup.rotation.x = currentRotX;
-        hologramGroup.rotation.y = currentRotY;
+    applyColors();
 
-        // Lebegő mozgás
-        hologramGroup.position.y = Math.sin(t * 0.5) * 0.08;
+    currentRotX+=(targetRotX-currentRotX)*0.07;
+    currentRotY+=(targetRotY-currentRotY)*0.07;
+    if(hologramGroup){
+        hologramGroup.rotation.x=currentRotX;
+        hologramGroup.rotation.y=currentRotY;
+        hologramGroup.position.y=Math.sin(t*0.5)*0.07;
     }
 
-    // Gyűrűk saját forgása
-    if (ringGroup) {
-        ringGroup.rotation.y = t * 0.3;
-        ringGroup.rotation.x = Math.sin(t * 0.2) * 0.15;
-        ringGroup.children[0].rotation.z = t * 0.5;
-        ringGroup.children[1].rotation.z = -t * 0.4;
+    if(ringGroup){
+        ringGroup.rotation.y=t*0.28;
+        ringGroup.rotation.x=Math.sin(t*0.17)*0.13;
+        const c=ringGroup.children;
+        if(c[0]) c[0].rotation.z=t*0.48;
+        if(c[1]) c[1].rotation.z=-t*0.36;
     }
 
-    // Gömb + iko
-    const floatSphere = hologramGroup?.getObjectByName('floatSphere');
-    const floatSphereWire = hologramGroup?.getObjectByName('floatSphereWire');
-    const floatIco = hologramGroup?.getObjectByName('floatIco');
-    if (floatSphere) {
-        floatSphere.position.y = 1.55 + Math.sin(t * 1.2) * 0.08;
-        floatSphere.rotation.y = t * 0.8;
-    }
-    if (floatSphereWire) {
-        floatSphereWire.position.y = (floatSphere?.position.y) ?? 1.55;
-        floatSphereWire.rotation.y = -t * 0.6;
-        floatSphereWire.rotation.x = t * 0.3;
-    }
-    if (floatIco) {
-        floatIco.position.y = (floatSphere?.position.y) ?? 1.55;
-        floatIco.rotation.y = t * 1.1;
-        floatIco.rotation.x = t * 0.7;
+    const fy=1.62+Math.sin(t*1.1)*0.09;
+    const sp=hologramGroup.getObjectByName('sp');
+    const sw=hologramGroup.getObjectByName('sw');
+    const si=hologramGroup.getObjectByName('si');
+    if(sp){ sp.position.y=fy; sp.rotation.y=t*0.7; }
+    if(sw){ sw.position.y=fy; sw.rotation.y=-t*0.5; sw.rotation.x=t*0.3; }
+    if(si){ si.position.y=fy; si.rotation.y=t*1.0; si.rotation.x=t*0.6; }
+
+    for(let i=0;i<5;i++){
+        const br=hologramGroup.getObjectByName(`br${i}`);
+        if(br) br.material.emissiveIntensity=0.28+Math.sin(t*2.2+i*0.9)*0.28*palette.glowMult;
     }
 
-    // Skill bárok pulzálása
-    for (let i = 0; i < 5; i++) {
-        const bar = hologramGroup?.getObjectByName(`bar${i}`);
-        if (bar) {
-            bar.material.emissiveIntensity = 0.3 + Math.sin(t * 2 + i * 0.8) * 0.3;
-        }
-    }
-
-    // Részecskék lassú forgása
-    if (particleSystem) {
-        particleSystem.rotation.y = t * 0.02;
-        particleSystem.rotation.x = Math.sin(t * 0.05) * 0.05;
-    }
-
-    renderer.render(scene, camera);
+    renderer.render(scene,camera);
 }
 
-// ═══════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// GYRO + TOUCH
+// ════════════════════════════════════════════════════════
+function setupGyro(){
+    if(typeof DeviceOrientationEvent==='undefined') return;
+    const enable=()=>{
+        window.addEventListener('deviceorientation',e=>{
+            if(e.beta===null) return;
+            gyroAvailable=true;
+            targetRotX=THREE.MathUtils.clamp((e.beta-80)*0.015,-0.6,0.6);
+            targetRotY=THREE.MathUtils.clamp(e.gamma*0.02,-0.8,0.8);
+        });
+    };
+    if(typeof DeviceOrientationEvent.requestPermission==='function'){
+        DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') enable(); }).catch(()=>{});
+    } else { enable(); }
+}
+
+document.addEventListener('touchstart',e=>{
+    if(e.target.closest('#action-bar')) return;
+    touchStartX=e.touches[0].clientX; touchStartY=e.touches[0].clientY;
+},{passive:true});
+
+document.addEventListener('touchmove',e=>{
+    if(e.target.closest('#action-bar')||gyroAvailable) return;
+    targetRotY=THREE.MathUtils.clamp((e.touches[0].clientX-touchStartX)*0.004,-1.2,1.2);
+    targetRotX=THREE.MathUtils.clamp((e.touches[0].clientY-touchStartY)*0.003,-0.8,0.8);
+},{passive:true});
+
+// ════════════════════════════════════════════════════════
 // INFO PANEL
-// ═══════════════════════════════════════════════════
-function showInfo(title, body) {
-    const panel = document.getElementById('info-panel');
-    document.getElementById('info-title').textContent = '// ' + title + ' //';
-    document.getElementById('info-body').innerHTML = body.replace(/\n/g, '<br>');
-    panel.classList.add('visible');
+// ════════════════════════════════════════════════════════
+function showInfo(title,body){
+    const p=document.getElementById('info-panel');
+    document.getElementById('info-title').textContent='// '+title+' //';
+    document.getElementById('info-body').innerHTML=body.replace(/\n/g,'<br>');
+    p.classList.add('visible');
     clearTimeout(infoTimer);
-    infoTimer = setTimeout(() => panel.classList.remove('visible'), 5000);
+    infoTimer=setTimeout(()=>p.classList.remove('visible'),5000);
 }
 </script>
 </body>
