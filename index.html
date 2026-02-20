@@ -131,10 +131,22 @@
 <body>
 
 <video id="camera-bg" autoplay muted playsinline></video>
+<!-- Előlapi kamera (rejtett) face detection-höz -->
+<video id="front-cam" autoplay muted playsinline style="position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;top:0;left:0;z-index:-1;"></video>
 <canvas id="ar-canvas"></canvas>
 
 <div id="hud">
     <div id="scanline"></div>
+    <div id="face-status" style="
+        position:absolute; top:50px; right:16px;
+        font-size:9px; letter-spacing:2px; color:#ffffff33;
+        transition:color 0.5s;
+        display:flex; flex-direction:column; align-items:flex-end; gap:3px;
+    ">
+        <div id="face-label">FACE TRACK</div>
+        <div id="face-dot" style="width:6px;height:6px;border-radius:50%;background:#ffffff22;margin-left:auto;transition:background 0.3s;box-shadow:none;"></div>
+        <div id="face-info" style="font-size:8px;color:#ffffff22;">INIT...</div>
+    </div>
     <div class="corner c-tl"></div>
     <div class="corner c-tr"></div>
     <div class="corner c-bl"></div>
@@ -173,6 +185,8 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script>
 let scene, camera, renderer, hologramGroup, ringGroup;
 let targetRotX=0, targetRotY=0, currentRotX=0, currentRotY=0;
@@ -200,6 +214,10 @@ async function startAR() {
         animate();
 
         document.getElementById('hud').classList.add('visible');
+
+        // Face tracking indítása (aszinkron, nem blokkolja az AR-t)
+        setTimeout(() => startFaceTracking(), 1500);
+
         const splash = document.getElementById('splash');
         splash.classList.add('hidden');
         setTimeout(() => splash.style.display = 'none', 900);
@@ -525,6 +543,9 @@ function animate() {
         if(b) b.material.emissiveIntensity = 0.28+Math.sin(t*2.2+i*0.9)*0.28;
     }
 
+    // Face tracking zoom + parallax alkalmazása
+    applyFaceTransform();
+
     renderer.render(scene, camera);
 }
 
@@ -564,6 +585,180 @@ function showInfo(title, body) {
     p.classList.add('visible');
     clearTimeout(infoTimer);
     infoTimer = setTimeout(()=>p.classList.remove('visible'), 5000);
+}
+
+// ════════════════════════════════════════════════════════
+// FACE TRACKING
+// ════════════════════════════════════════════════════════
+// Zoom és parallax állapot
+window._faceZoom       = 1.0;   // jelenlegi zoom (lerp-elt)
+window._faceZoomTarget = 1.0;   // cél zoom
+window._facePanX       = 0.0;   // vízszintes eltolás
+window._facePanXTarget = 0.0;
+window._facePanY       = 0.0;
+window._facePanYTarget = 0.0;
+window._faceDetected   = false;
+window._faceFrameCount = 0;
+window._faceFPS        = 0;
+window._faceLastTime   = 0;
+window._faceActive     = false;
+window._faceFallback   = false; // ha lassú → kikapcsol
+
+// A hologramGroup scale és position módosítása az animáció loopban
+// (ezt az animate() végén kell meghívni)
+function applyFaceTransform() {
+    if (!hologramGroup) return;
+
+    // Sima lerp
+    window._faceZoom  += (window._faceZoomTarget  - window._faceZoom)  * 0.08;
+    window._facePanX  += (window._facePanXTarget  - window._facePanX)  * 0.06;
+    window._facePanY  += (window._facePanYTarget  - window._facePanY)  * 0.06;
+
+    const z = window._faceZoom;
+    hologramGroup.scale.set(z, z, z);
+
+    // Parallax: arc balra megy → névjegy jobbra tolódik (ellentétes)
+    hologramGroup.position.x = window._facePanX;
+    hologramGroup.position.y = window._facePanY + Math.sin(Date.now()*0.0005)*0.07;
+}
+
+async function startFaceTracking() {
+    const statusDot  = document.getElementById('face-dot');
+    const statusInfo = document.getElementById('face-info');
+    const statusLabel = document.getElementById('face-label');
+
+    // Előlapi kamera megnyitása
+    let frontStream;
+    try {
+        frontStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width:{ideal:320}, height:{ideal:240} },
+            audio: false
+        });
+    } catch(e) {
+        statusInfo.textContent = 'NO FRONT CAM';
+        return;
+    }
+
+    const frontVideo = document.getElementById('front-cam');
+    frontVideo.srcObject = frontStream;
+    await new Promise(r => frontVideo.onloadedmetadata = r);
+    frontVideo.play();
+
+    statusInfo.textContent = 'LOADING MODEL...';
+
+    // MediaPipe Face Detection inicializálás
+    let faceDetection;
+    try {
+        faceDetection = new FaceDetection({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
+        });
+        faceDetection.setOptions({
+            model: 'short',        // gyorsabb modell
+            minDetectionConfidence: 0.5
+        });
+        faceDetection.onResults(onFaceResults);
+        await faceDetection.initialize();
+    } catch(e) {
+        statusInfo.textContent = 'MODEL ERROR';
+        statusDot.style.background = '#ff005566';
+        return;
+    }
+
+    statusInfo.textContent = 'ACTIVE';
+    statusDot.style.background = '#00ffcc';
+    statusDot.style.boxShadow = '0 0 6px #00ffcc';
+    statusLabel.style.color = '#00ffcc88';
+    window._faceActive = true;
+
+    // FPS mérő + lassúság detektálás
+    let slowFrameCount = 0;
+    let frameIndex = 0;
+
+    // Feldolgozás loop - nem minden képkockát, csak 10 FPS-en
+    async function processFrame() {
+        if (window._faceFallback) return;
+        if (!window._faceActive) return;
+
+        const now = Date.now();
+        const elapsed = now - window._faceLastTime;
+
+        // Max 10 FPS a face detection-nek (mobilon elég)
+        if (elapsed < 100) {
+            requestAnimationFrame(processFrame);
+            return;
+        }
+
+        window._faceLastTime = now;
+        frameIndex++;
+
+        const t0 = performance.now();
+        try {
+            await faceDetection.send({image: frontVideo});
+        } catch(e) {}
+        const dt = performance.now() - t0;
+
+        // Ha egy frame > 500ms → túl lassú → leállítjuk
+        if (dt > 500) slowFrameCount++;
+        if (slowFrameCount >= 3) {
+            window._faceFallback = true;
+            window._faceActive = false;
+            statusInfo.textContent = 'TOO SLOW';
+            statusDot.style.background = '#ff005566';
+            statusDot.style.boxShadow = 'none';
+            statusLabel.style.color = '#ff005544';
+            // Zoom visszaállítás
+            window._faceZoomTarget = 1.0;
+            window._facePanXTarget = 0.0;
+            window._facePanYTarget = 0.0;
+            return;
+        }
+
+        // FPS kijelzés
+        if (frameIndex % 10 === 0) {
+            window._faceFPS = Math.round(1000 / elapsed);
+            statusInfo.textContent = window._faceFPS + ' FPS';
+        }
+
+        requestAnimationFrame(processFrame);
+    }
+
+    requestAnimationFrame(processFrame);
+}
+
+function onFaceResults(results) {
+    if (!results.detections || results.detections.length === 0) {
+        // Nincs arc → lassan visszazoomol
+        window._faceDetected = false;
+        window._faceZoomTarget = 1.0;
+        window._facePanXTarget = 0.0;
+        window._facePanYTarget = 0.0;
+        return;
+    }
+
+    window._faceDetected = true;
+    const det = results.detections[0];
+    const bbox = det.boundingBox;
+
+    // bbox: xCenter, yCenter, width, height (0-1 értékek)
+    const xC = bbox.xCenter;
+    const yC = bbox.yCenter;
+    const faceW = bbox.width;  // arc szélessége: minél nagyobb, annál közelebb
+
+    // Zoom: arc mérete alapján
+    // Normál távolság ~0.20-0.30 faceW
+    // Ha közelebb → zoom in, ha távolabb → zoom out
+    const normalFaceW = 0.25;
+    const rawZoom = faceW / normalFaceW;
+    // Zoom clamp: 0.8x – 2.2x között
+    window._faceZoomTarget = Math.min(Math.max(rawZoom * 0.9, 0.8), 2.2);
+
+    // Parallax: arc center eltérése a képközéptől
+    // xC=0.5 középen, <0.5 bal, >0.5 jobb (tükrözve mert selfie kamera)
+    const dx = (0.5 - xC) * 2.0;  // -1 to +1, tükrözve
+    const dy = (0.5 - yC) * 1.2;
+
+    window._facePanXTarget = dx * 1.5;   // max ±1.5 egység eltolás
+    window._facePanYTarget = dy * 0.8;
 }
 </script>
 </body>
