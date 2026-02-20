@@ -51,15 +51,15 @@
         .c-bl{ bottom:15px; left:15px; border-width:0 0 2px 2px; }
         .c-br{ bottom:15px; right:15px; border-width:0 2px 2px 0; }
 
-        /* ── ÚJ, KOMPAKT NÉVJEGYKÁRTYA ── */
+        /* ── NÉVJEGYKÁRTYA ── */
         #namecard{ 
             position:absolute; top:25px; left:25px; 
-            width: 320px; max-width: calc(100vw - 50px); /* Kártya méret */
+            width: 320px; max-width: calc(100vw - 50px); 
             background: linear-gradient(135deg, rgba(0,4,15,0.65) 0%, rgba(0,2,8,0.45) 100%);
             backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.05);
             border-left: 4px solid var(--p);
-            border-radius: 8px; /* Lekerekített, igazi kártya forma */
+            border-radius: 8px; 
             padding: 18px 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             pointer-events: auto; 
@@ -71,16 +71,20 @@
         .nc-data{ font-family:'Share Tech Mono',monospace; font-size:9px; color:#ffffffaa; line-height:1.8; letter-spacing:1px; }
         .nc-data b{ color:#ffffff; font-weight: 600; }
 
-        .action-btns { display: flex; gap: 8px; margin-top: 14px; }
+        .action-btns { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
         .act-btn {
             font-family: 'Share Tech Mono', monospace; font-size: 9px; font-weight: bold; letter-spacing: 1px;
-            padding: 10px 14px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;
-            border-radius: 4px; transition: all 0.2s; flex: 1; text-align: center;
+            padding: 10px 6px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;
+            border-radius: 4px; transition: all 0.2s; flex: 1; text-align: center; white-space: nowrap;
         }
         .act-btn-primary { background: var(--p); color: #000; border: none; box-shadow: 0 0 10px var(--pg); }
         .act-btn-primary:active { transform: scale(0.95); background: #fff; }
         .act-btn-secondary { background: rgba(0,0,0,0.5); color: var(--p); border: 1px solid var(--p); }
         .act-btn-secondary:active { transform: scale(0.95); background: var(--p); color: #000; }
+        
+        /* ÚJ: AI ASSZISZTENS GOMB */
+        .act-btn-ai { background: rgba(0,207,255,0.1); border: 1px solid #00cfff; color: #fff; text-shadow: 0 0 8px #00cfff; flex-basis: 100%; margin-top: 4px;}
+        .act-btn-ai:active { transform: scale(0.98); background: #00cfff; color: #000; text-shadow: none; }
 
         /* Státusz a jobb felső sarokban */
         #statusbox{ position:absolute; top:25px; right:25px; text-align:right; }
@@ -105,10 +109,11 @@
         #tap-hint.show{ opacity:1; animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
-        /* ════ MODAL (Projekt Kártya) ════ */
-        #modal-backdrop { position: fixed; inset: 0; z-index: 25; display: none; background: rgba(0,0,0,0.1); pointer-events: auto; }
+        /* ════ MODALOK HÁTTERE ════ */
+        #modal-backdrop { position: fixed; inset: 0; z-index: 25; display: none; background: rgba(0,0,0,0.4); pointer-events: auto; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);}
         #modal-backdrop.open { display: block; }
 
+        /* ════ PROJEKT PANEL ════ */
         #proj-panel{
             position:absolute; bottom:0; left:0; right:0; z-index:30; pointer-events:none; 
             transform:translateY(100%); transition:transform 0.5s cubic-bezier(0.2, 1, 0.3, 1);
@@ -180,6 +185,51 @@
             clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
         }
         #pp-close-btn-large:active { background: rgba(255,255,255,0.15); border-color: #fff; }
+
+        /* ════ AI CHAT PANEL ════ */
+        #ai-panel {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            width: 90vw; max-width: 400px; height: 75vh; z-index: 40; pointer-events: none; opacity: 0;
+            background: linear-gradient(135deg, rgba(0,5,15,0.95) 0%, rgba(0,2,8,0.98) 100%);
+            border: 1px solid var(--p); box-shadow: 0 0 50px rgba(0,207,255,0.2), inset 0 0 20px rgba(0,207,255,0.05);
+            border-radius: 8px; display: flex; flex-direction: column;
+            transition: all 0.4s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+        #ai-panel.open { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+        
+        .ai-header {
+            padding: 15px; border-bottom: 1px solid var(--pg); display: flex; justify-content: space-between; align-items: center;
+        }
+        .ai-title { font-family: 'Orbitron', sans-serif; font-size: 14px; color: var(--p); font-weight: 700; letter-spacing: 2px; display: flex; align-items: center; gap: 10px; }
+        .ai-title span { display: inline-block; width: 8px; height: 8px; background: #00ffaa; border-radius: 50%; box-shadow: 0 0 10px #00ffaa; animation: blink 2s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        .ai-close { color: #ffffff55; font-family: monospace; font-size: 20px; cursor: pointer; border: none; background: transparent; }
+        
+        #ai-chat-box {
+            flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+            font-family: 'Share Tech Mono', monospace; font-size: 11px; line-height: 1.5; color: #ddd;
+        }
+        .msg { padding: 10px 14px; border-radius: 6px; max-width: 85%; word-wrap: break-word;}
+        .msg-user { align-self: flex-end; background: rgba(255,255,255,0.1); border-bottom-right-radius: 0; }
+        .msg-ai { align-self: flex-start; background: rgba(0,207,255,0.15); border-left: 2px solid var(--p); border-bottom-left-radius: 0; }
+        .msg-sys { align-self: center; font-size: 9px; color: #888; text-align: center; }
+
+        .ai-input-area {
+            padding: 15px; border-top: 1px solid var(--pg); display: flex; gap: 10px;
+        }
+        #ai-input {
+            flex: 1; background: rgba(0,0,0,0.5); border: 1px solid #ffffff33; border-radius: 4px;
+            padding: 10px; color: #fff; font-family: 'Share Tech Mono', monospace; font-size: 11px;
+            outline: none; transition: border-color 0.3s;
+        }
+        #ai-input:focus { border-color: var(--p); }
+        #ai-send {
+            background: var(--p); color: #000; border: none; font-weight: bold; padding: 0 15px;
+            cursor: pointer; border-radius: 4px; font-family: 'Orbitron', sans-serif; transition: transform 0.2s;
+        }
+        #ai-send:active { transform: scale(0.9); }
+        .typing-indicator { font-style: italic; color: var(--p); font-size: 10px; display: none; padding: 0 15px 10px;}
+
     </style>
 </head>
 <body>
@@ -204,8 +254,9 @@
             github.com/kovacs-ai
         </div>
         <div class="action-btns">
-            <button id="btn-contact" class="act-btn act-btn-primary" onclick="saveContact()">NÉVJEGY MENTÉSE</button>
+            <button id="btn-contact" class="act-btn act-btn-primary" onclick="saveContact()">NÉVJEGY</button>
             <a href="https://calendly.com/" target="_blank" class="act-btn act-btn-secondary">IDŐPONT</a>
+            <button id="btn-ai" class="act-btn act-btn-ai" onclick="openAIPanel()">🤖 AI MÁS</button>
         </div>
     </div>
 
@@ -223,7 +274,24 @@
     <div id="tap-hint">// KOPPINTS EGY EMELETRE //</div>
 </div>
 
-<div id="modal-backdrop" onclick="closePanel()"></div>
+<div id="modal-backdrop" onclick="closePanels()"></div>
+
+<!-- AI CHAT PANEL -->
+<div id="ai-panel">
+    <div class="ai-header">
+        <div class="ai-title"><span></span> AI-GÁBOR TWIN</div>
+        <button class="ai-close" onclick="closePanels()">✕</button>
+    </div>
+    <div id="ai-chat-box">
+        <div class="msg msg-sys">A kommunikációs csatorna titkosítva.</div>
+        <div class="msg msg-ai">Üdvözlöm! Én Kovács AI-Gábor digitális másolata vagyok. A valós énem épp a tornyot építi. Miben segíthetek? Kérdezzen bátran a projektjeimről vagy egyeztessünk időpontot!</div>
+    </div>
+    <div id="ai-typing" class="typing-indicator">A neurális hálózat válaszol...</div>
+    <div class="ai-input-area">
+        <input type="text" id="ai-input" placeholder="Kérdezzen az AI tapasztalatokról..." autocomplete="off" onkeypress="handleEnter(event)">
+        <button id="ai-send" onclick="sendAIMessage()">Küld</button>
+    </div>
+</div>
 
 <!-- Projekt panel -->
 <div id="proj-panel">
@@ -247,7 +315,7 @@
             <div class="sbox"><div class="sv" id="sv2">–</div><div class="sl" id="sl2">–</div></div>
             <div class="sbox"><div class="sv" id="sv3">–</div><div class="sl" id="sl3">–</div></div>
         </div>
-        <button id="pp-close-btn-large" onclick="closePanel()">✕ VISSZA A TORONYHOZ</button>
+        <button id="pp-close-btn-large" onclick="closePanels()">✕ VISSZA A TORONYHOZ</button>
     </div>
 </div>
 
@@ -303,7 +371,7 @@ const FLOORS = [
 let scene, camera, renderer, raycaster, mouse;
 let towerGroup, floorGroups=[];
 let buildPhase='idle';
-let selectedFloor=-1, panelOpen=false;
+let selectedFloor=-1, panelOpen=false, aiPanelOpen=false;
 let pulseAnim = 0; 
 
 // Kamera & Giroszkóp
@@ -324,6 +392,97 @@ const FH=0.65, FW=1.4, BASE_Y=-1.8;
 const BUILD_S=16; 
 
 // ════════════════════════════════════════════════════════════
+// AI DIGITÁLIS MÁS (GEMINI API INTEGRÁCIÓ)
+// ════════════════════════════════════════════════════════════
+const apiKey = ""; // Runtime injektálja
+const chatHistory = [];
+
+function openAIPanel() {
+    if(buildPhase!=='done') return;
+    if(panelOpen) {
+        document.getElementById('proj-panel').classList.remove('open');
+        panelOpen = false;
+    }
+    aiPanelOpen = true;
+    document.getElementById('ai-panel').classList.add('open');
+    document.getElementById('modal-backdrop').classList.add('open');
+    document.getElementById('tap-hint').classList.remove('show');
+    
+    // AI Panel fókusz
+    setTimeout(() => document.getElementById('ai-input').focus(), 300);
+}
+
+function closePanels() {
+    panelOpen = false;
+    aiPanelOpen = false;
+    document.getElementById('proj-panel').classList.remove('open');
+    document.getElementById('ai-panel').classList.remove('open');
+    document.getElementById('modal-backdrop').classList.remove('open'); 
+    document.querySelectorAll('.fn-card').forEach(c=>c.classList.remove('active'));
+    setTimeout(()=>{ if(buildPhase==='done') document.getElementById('tap-hint').classList.add('show'); },600);
+}
+
+function handleEnter(e) {
+    if (e.key === 'Enter') sendAIMessage();
+}
+
+async function sendAIMessage() {
+    const inputEl = document.getElementById('ai-input');
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    inputEl.value = '';
+    appendMessage(text, 'user');
+    document.getElementById('ai-typing').style.display = 'block';
+
+    const systemPrompt = `Te vagy Kovács AI-Gábor digitális mása, egy magabiztos, profi Lead AI Engineer. 
+    Válaszolj tömören (max 2-3 mondat), udvariasan és szakmai stílusban magyarul.
+    Célod, hogy lenyűgözd a látogatót, bemutasd a képességeidet, és rávedd, hogy foglaljon időpontot a Calendly linken a Névjegyen keresztül.
+    A portfóliód 6 fő eleme: DIAG-NET (Röntgen AI), GENO-SCAN (Genetika), NEURO-VISION (MRI U-Net), PHARMA-PRED (Gyógyszerhatás LLM), CLINIC-BOT (Orvosi LLM asszisztens), VITAL-FLOW (ICU Valós idejű predikció).
+    Ha a felhasználó nem szakmai kérdést tesz fel, ügyesen tereld vissza a témát az AI projektekre.`;
+
+    const payload = {
+        contents: [...chatHistory, { role: "user", parts: [{ text: text }] }],
+        systemInstruction: { parts: [{ text: systemPrompt }] }
+    };
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        let botReply = "Sajnálom, a neurális hálózatom jelenleg túlterhelt.";
+        if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
+            botReply = data.candidates[0].content.parts[0].text;
+            chatHistory.push({ role: "user", parts: [{ text: text }] });
+            chatHistory.push({ role: "model", parts: [{ text: botReply }] });
+        }
+        
+        document.getElementById('ai-typing').style.display = 'none';
+        appendMessage(botReply, 'ai');
+        
+        // Animáljuk a tornyot beszéd közben!
+        pulseAnim = 0.8;
+
+    } catch (e) {
+        document.getElementById('ai-typing').style.display = 'none';
+        appendMessage("// Rendszerhiba: API kapcsolat megszakadt //", 'sys');
+    }
+}
+
+function appendMessage(text, sender) {
+    const box = document.getElementById('ai-chat-box');
+    const div = document.createElement('div');
+    div.className = `msg msg-${sender}`;
+    div.textContent = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+// ════════════════════════════════════════════════════════════
 // NÉVJEGY LETÖLTÉS (vCard)
 // ════════════════════════════════════════════════════════════
 function saveContact() {
@@ -340,7 +499,7 @@ function saveContact() {
     btn.innerHTML = "✓ MENTVE"; btn.style.background = "#fff"; btn.style.color = "#000";
     setTimeout(() => { btn.innerHTML = orig; btn.style.background = ""; btn.style.color = ""; }, 2500);
 
-    pulseAnim = 1.0; // Adat-burst animáció indítása
+    pulseAnim = 1.0; 
 }
 
 // ════════════════════════════════════════════════════════════
@@ -676,6 +835,7 @@ function buildFloorNav(){
 
 function selectFloor(idx){
     if(buildPhase!=='done') return;
+    if(aiPanelOpen) return; // Ne engedjük kinyitni, ha a chat aktív
     selectedFloor=idx;
     document.querySelectorAll('.fn-card').forEach((c,i)=> c.classList.toggle('active',i===selectedFloor));
     const cards=document.querySelectorAll('.fn-card');
@@ -694,15 +854,6 @@ function selectFloor(idx){
 function navFloor(dir){
     const next=((selectedFloor+dir)+FLOORS.length)%FLOORS.length;
     selectFloor(next);
-}
-
-function closePanel(){
-    panelOpen=false;
-    selectedFloor=-1;
-    document.getElementById('proj-panel').classList.remove('open');
-    document.getElementById('modal-backdrop').classList.remove('open'); 
-    document.querySelectorAll('.fn-card').forEach(c=>c.classList.remove('active'));
-    setTimeout(()=>{ if(buildPhase==='done') document.getElementById('tap-hint').classList.add('show'); },600);
 }
 
 function fillPanel(idx){
@@ -736,13 +887,12 @@ function animate(){
     requestAnimationFrame(animate);
     const t=Date.now()*.001;
 
-    // Környezet adaptáció frissítése
     if(t - lastSample > 0.2) { lastSample = t; analyzeBackground(); }
     
     envBright += (targetBright - envBright) * 0.05;
     currentEnvColor.lerp(targetEnvColor, 0.05);
 
-    if(!panelOpen) {
+    if(!panelOpen && !aiPanelOpen) {
         const hex = '#' + currentEnvColor.getHexString();
         document.documentElement.style.setProperty('--p', hex);
         document.documentElement.style.setProperty('--pg', hex + '77');
@@ -767,7 +917,6 @@ function animate(){
         burstGlow = pulseAnim * 4.0; 
     }
 
-    // Kamera giroszkópos forgatása, hatalmas torony fókusszal
     cRotX+=(tRotX-cRotX)*0.06; cRotY+=(tRotY-cRotY)*0.06;
     const R=8.5; 
     camera.position.set(Math.sin(cRotY)*R, 0.5+cRotX*R*0.5, Math.cos(cRotY)*R);
@@ -821,7 +970,7 @@ function animate(){
 // TOUCH + RAYCASTER + GYRO
 // ════════════════════════════════════════════════════════════
 function onTap(x,y){
-    if(buildPhase!=='done' || panelOpen) return;
+    if(buildPhase!=='done' || panelOpen || aiPanelOpen) return;
     mouse.x=(x/window.innerWidth)*2-1;
     mouse.y=-(y/window.innerHeight)*2+1;
     raycaster.setFromCamera(mouse,camera);
