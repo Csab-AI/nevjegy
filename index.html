@@ -65,7 +65,20 @@
         .nc-name{ font-family:'Cormorant Garamond',serif; font-size:clamp(20px,5vw,26px); font-weight:700; color:#fff; letter-spacing:4px; text-shadow:0 0 24px var(--pg); transition: text-shadow 0.5s; }
         .nc-role{ font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--p); letter-spacing:5px; margin-top:6px; font-weight:bold; transition: color 0.5s; }
         .nc-sep{ width:120px; height:2px; background:linear-gradient(90deg,var(--p),transparent); margin:10px 0; opacity:0.5; transition: background 0.5s; }
-        
+        .nc-data{ font-family:'Share Tech Mono',monospace; font-size:9px; color:#ffffff88; line-height:2; letter-spacing:1px; }
+        .nc-data b{ color:#ffffff; }
+
+        /* Akció gombok a HUD-on belül */
+        .action-btns { display: flex; gap: 10px; margin-top: 12px; pointer-events: auto; }
+        .act-btn {
+            font-family: 'Share Tech Mono', monospace; font-size: 9px; font-weight: bold; letter-spacing: 2px;
+            padding: 8px 12px; border: 1px solid var(--p); background: var(--pb);
+            color: var(--p); cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;
+            clip-path: polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+            transition: all 0.3s; text-shadow: 0 0 8px var(--pg);
+        }
+        .act-btn:active { background: var(--p); color: #000; transform: scale(0.95); text-shadow: none; }
+
         #statusbox{ position:absolute; top:30px; right:26px; text-align:right; }
         .sb-r{ font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:3px; color:#ffffff66; margin-bottom:6px; }
         .sb-r b{ color:var(--p); opacity:0.9; transition: color 0.5s; }
@@ -201,6 +214,13 @@
             <b>ai@kovacs.dev</b>  ·  +36 XX XXX XXXX<br>
             github.com/kovacs-ai  ·  Budapest, HU
         </div>
+        
+        <!-- Új Interaktív Akció Gombok -->
+        <div class="action-btns">
+            <!-- Példa Calendly link (cseréld le a sajátodra) -->
+            <a href="https://calendly.com/" target="_blank" class="act-btn">📅 IDŐPONT</a>
+            <button id="btn-contact" class="act-btn" onclick="saveContact()">👤 NÉVJEGY MENTÉSE</button>
+        </div>
     </div>
 
     <div id="statusbox">
@@ -303,6 +323,9 @@ let towerGroup, floorGroups=[];
 let buildPhase='idle';
 let selectedFloor=-1, panelOpen=false;
 
+// Új: "Data Burst" Animációs változó
+let pulseAnim = 0; 
+
 // Kamera
 let gyroAvail=false, tRotX=0, tRotY=0, cRotX=0, cRotY=0;
 let touchX=0, touchY=0, touchMoved=false;
@@ -350,7 +373,52 @@ async function startAR(){
 }
 
 // ════════════════════════════════════════════════════════════
-// KÖRNYEZET-ANALIZÁLÓ (ÚJ)
+// NÉVJEGY LETÖLTÉS (vCard)
+// ════════════════════════════════════════════════════════════
+function saveContact() {
+    // 1. vCard (.vcf) Fájl generálása
+    const vcardData = `BEGIN:VCARD
+VERSION:3.0
+FN:Kovács AI-Gábor
+ORG:Neural Architect
+TITLE:Lead AI Engineer
+TEL;TYPE=WORK,VOICE:+36123456789
+EMAIL:ai@kovacs.dev
+URL:https://github.com/kovacs-ai
+NOTE:Kiterjesztett Valóság Portfólióból mentve
+END:VCARD`;
+
+    const blob = new Blob([vcardData], { type: 'text/vcard' });
+    const url = URL.createObjectURL(blob);
+    
+    // Láthatatlan letöltő link létrehozása és aktiválása
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Kovacs_AI_Gabor.vcf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // 2. Ui Gomb Vizuális Visszajelzés
+    const btn = document.getElementById('btn-contact');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "✓ SIKERES MENTÉS";
+    btn.style.background = "var(--p)";
+    btn.style.color = "#000";
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = "";
+        btn.style.color = "";
+    }, 2500);
+
+    // 3. Torony "Data Burst" Animáció elindítása
+    pulseAnim = 1.0; 
+}
+
+
+// ════════════════════════════════════════════════════════════
+// KÖRNYEZET-ANALIZÁLÓ 
 // ════════════════════════════════════════════════════════════
 function analyzeBackground(){
     const video=document.getElementById('camera-bg');
@@ -735,11 +803,9 @@ function animate(){
         analyzeBackground(); 
     }
     
-    // Szín és fényesség sima átmenete
     envBright += (targetBright - envBright) * 0.05;
     currentEnvColor.lerp(targetEnvColor, 0.05);
 
-    // 1. HUD / UI Szín Illesztés (Kivéve ha a projekt kártya felülírja)
     if(!panelOpen) {
         const hex = '#' + currentEnvColor.getHexString();
         setVar('--p', hex);
@@ -747,17 +813,28 @@ function animate(){
         setVar('--pb', hexToRgba(hex, 0.15));
     }
 
-    // 2. Fények Illesztése (A köd és az alsó fény felveszi a szoba színét!)
     if(fillLight) fillLight.color.copy(currentEnvColor);
     if(scene.fog) scene.fog.color.copy(currentEnvColor).multiplyScalar(0.06);
 
-    // 3. Kontraszt Invertálás (Sötét szoba -> Világos torony)
-    // Ha sötét van (envBright alacsony), akkor invBright magas.
     const invBright = Math.max(0.1, 1.0 - envBright);
-    const glowFactor = 0.01 + (invBright * 0.15); // A torony belső fénye erősödik sötétben
-    const glassOp = 0.6 + (envBright * 0.35); // A torony sötétebb/tömörebb lesz fényes nappal
+    const glowFactor = 0.01 + (invBright * 0.15); 
+    const glassOp = 0.6 + (envBright * 0.35); 
     
-    // Kamera
+    // Névjegy Mentése Animáció (Data Burst Effect)
+    let burstRotation = 0;
+    let burstScale = 1.0;
+    let burstGlow = 0;
+    
+    if (pulseAnim > 0) {
+        pulseAnim -= 0.015; // Szép lassan halványul el az effekt
+        if (pulseAnim < 0) pulseAnim = 0;
+        
+        burstRotation = pulseAnim * 2.0; // Pörgés
+        burstScale = 1.0 + (pulseAnim * 0.15); // Enyhe növekedés
+        burstGlow = pulseAnim * 4.0; // Erős felvillanás
+    }
+
+    // Kamera interpoláció
     cRotX+=(tRotX-cRotX)*0.06; cRotY+=(tRotY-cRotY)*0.06;
     const R=8.5; 
     camera.position.set(Math.sin(cRotY)*R, 0.5+cRotX*R*0.5, Math.cos(cRotY)*R);
@@ -778,29 +855,31 @@ function animate(){
         const baseY=BASE_Y+(i+0.5)*FH;
         const isSel=(i===selectedFloor);
 
-        // Dinamikus üveg átlátszóság (világosban tömörebb, sötétben áttetsző)
         fm.glassMat.opacity = THREE.MathUtils.lerp(fm.glassMat.opacity, isSel ? 0.9 : glassOp, 0.1);
 
         if(isSel){
-            fm.glassMat.emissiveIntensity = (glowFactor * 3.5) + Math.sin(t*5)*0.15; 
+            fm.glassMat.emissiveIntensity = (glowFactor * 3.5) + Math.sin(t*5)*0.15 + burstGlow; 
             fm.exScale = THREE.MathUtils.lerp(fm.exScale, 1.15, 0.06); 
             fm.exY = THREE.MathUtils.lerp(fm.exY, 0.25, 0.06); 
         } else {
-            fm.glassMat.emissiveIntensity = glowFactor + Math.sin(t*1.5+i)*0.015;
+            fm.glassMat.emissiveIntensity = glowFactor + Math.sin(t*1.5+i)*0.015 + burstGlow;
             fm.exScale = THREE.MathUtils.lerp(fm.exScale, 1.0, 0.08);
             fm.exY = THREE.MathUtils.lerp(fm.exY, 0.0, 0.08);
         }
         
         fm.group.scale.set(fm.exScale, 1, fm.exScale);
-        fm.group.position.y=baseY+fm.exY;
+        fm.group.position.y = baseY + fm.exY;
         
-        // Ablakfények vibrálása (sötétben sokkal jobban látszanak)
         fm.lightGroup.children.forEach((light, lIdx) => {
             light.material.opacity = (isSel ? 1.0 : (0.2 + invBright*0.6)) + Math.sin(t * (2+lIdx%3) + lIdx) * 0.3;
         });
     });
 
-    if(towerGroup) towerGroup.position.y=Math.sin(t*0.5)*0.05;
+    if(towerGroup) {
+        towerGroup.position.y = Math.sin(t*0.5)*0.05 + (pulseAnim * 0.1); // Torony felugrik kicsit
+        towerGroup.rotation.y = burstRotation; // Torony megpördül
+        towerGroup.scale.set(burstScale, burstScale, burstScale); // Torony kitágul
+    }
 
     renderer.render(scene,camera);
 }
