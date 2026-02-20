@@ -228,7 +228,11 @@ let sampleCanvas, sampleCtx, lastSample=0;
 // ════════════════════════════════════════════════════════
 async function startAR() {
     try {
-        // iOS Safari: egyszerű fallback lánc
+        // iOS JAVÍTÁS 1: A giroszkóp lekérését azonnal meg kell kezdeni,
+        // nem szabad megvárni a kamera betöltődését (mert elveszik a kattintás-engedély).
+        setupGyro();
+
+        // iOS Safari: egyszerű fallback lánc a kamerára
         let stream;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
@@ -239,14 +243,21 @@ async function startAR() {
                 stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             }
         }
+        
         const video = document.getElementById('camera-bg');
         video.srcObject = stream;
+
+        // iOS JAVÍTÁS 2: Expliciten meg kell hívni a play() metódust
+        try {
+            await video.play();
+        } catch(playErr) {
+            console.warn("Video auto-play elutasítva, de futhat tovább:", playErr);
+        }
 
         sampleCanvas = document.createElement('canvas');
         sampleCanvas.width=64; sampleCanvas.height=36;
         sampleCtx = sampleCanvas.getContext('2d',{willReadFrequently:true});
 
-        setupGyro();
         initThree();
         animate();
 
@@ -291,47 +302,31 @@ function analyzeBackground() {
     let pCol, sCol, aCol, textBg, textColor, mode, swatch;
 
     if (brightness > 0.70) {
-        // ── Nagyon VILÁGOS (fehér fal, monitor, nap) ──
-        // → Sötét, mély kontrasztos hologram
         pCol='#0066ff'; sCol='#cc00ee'; aCol='#ff4400';
         textBg='rgba(0,0,0,0.90)'; textColor='#44aaff';
         mode='DARK'; swatch='#0066ff';
         palette.glowMult=1.5;
-
     } else if (brightness < 0.18) {
-        // ── Nagyon SÖTÉT (éjszaka, sötét szoba) ──
-        // → Élénk, erős neon – minden látszik
         pCol='#00ffdd'; sCol='#ff44ff'; aCol='#ffdd00';
         textBg='rgba(0,15,25,0.65)'; textColor='#00ffdd';
         mode='NEON'; swatch='#00ffdd';
         palette.glowMult=2.0;
-
     } else if (warmth > 0.18) {
-        // ── MELEG háttér (fa, bőr, tégla, naplemente) ──
-        // → Hideg kontrasz: jeges kék/cyan domináns
         pCol='#00ddff'; sCol='#0033ff'; aCol='#00ffaa';
         textBg='rgba(0,4,18,0.88)'; textColor='#00ddff';
         mode='COOL'; swatch='#00ddff';
         palette.glowMult=1.3;
-
     } else if (warmth < -0.12) {
-        // ── HIDEG háttér (kék ég, kék fal, vízfelület) ──
-        // → Meleg arany/narancs kontrasz
         pCol='#ffaa00'; sCol='#ff6600'; aCol='#ffee33';
         textBg='rgba(18,6,0,0.88)'; textColor='#ffaa00';
         mode='WARM'; swatch='#ffaa00';
         palette.glowMult=1.2;
-
     } else if (sat < 0.12) {
-        // ── SZÜRKE/SEMLEGES háttér ──
-        // → Teljes cyberpunk (eredeti paletta)
         pCol='#00ffcc'; sCol='#8a2be2'; aCol='#ff0055';
         textBg='rgba(0,10,20,0.82)'; textColor='#00ffcc';
         mode='CYBER'; swatch='#00ffcc';
         palette.glowMult=1.0;
-
     } else {
-        // ── VEGYES – komplementer szín logika ──
         const hue = Math.atan2(Math.sqrt(3)*(gA-bA), 2*rA-gA-bA)*180/Math.PI;
         const ch = ((hue+180)%360+360)%360;
         pCol=`hsl(${ch},100%,58%)`;
@@ -353,7 +348,6 @@ function analyzeBackground() {
     document.getElementById('ci-mode').style.color = swatch;
     document.getElementById('ci-mode').textContent = mode+' MODE';
 
-    // Szöveg újrarajzolás
     if(textTexture) redrawText();
 }
 
@@ -396,7 +390,6 @@ function initThree() {
 function buildHologram() {
     const p=palette.primary, s=palette.secondary, a=palette.accent;
 
-    // ── Gyűrűk ──
     ringGroup = new THREE.Group();
     hologramGroup.add(ringGroup);
 
@@ -410,7 +403,6 @@ function buildHologram() {
     ringGroup.add(r1,r2,r3);
     managedMats.ring1=m1; managedMats.ring2=m2; managedMats.ring3=m3;
 
-    // Tick jelek
     for(let i=0;i<24;i++){
         const ang=(i/24)*Math.PI*2;
         const tm=new THREE.MeshBasicMaterial({color:p.clone(),transparent:true,opacity:i%6===0?0.9:0.35});
@@ -422,7 +414,6 @@ function buildHologram() {
         managedMats.ticks.push(tm);
     }
 
-    // ── Kártya ──
     const cardMat=new THREE.MeshPhongMaterial({color:0x000d1a,emissive:0x000510,transparent:true,opacity:0.75,shininess:200});
     const card=new THREE.Mesh(new THREE.BoxGeometry(3.3,1.9,0.04),cardMat);
     hologramGroup.add(card); managedMats.card=cardMat;
@@ -435,7 +426,6 @@ function buildHologram() {
     hologramGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.5,0.28,0.026),new THREE.Vector3(1.5,0.28,0.026)]),lineMat));
     managedMats.divLine=lineMat;
 
-    // Sarkok
     [[1.5,0.9],[-1.5,0.9],[1.5,-0.9],[-1.5,-0.9]].forEach(([x,y])=>{
         const sx=x>0?1:-1,sy=y>0?1:-1;
         const cm=new THREE.MeshBasicMaterial({color:p.clone(),transparent:true,opacity:0.85});
@@ -447,7 +437,6 @@ function buildHologram() {
         managedMats.corners.push(cm);
     });
 
-    // ── Szöveg textúra ──
     const tc=document.createElement('canvas'); tc.width=1024; tc.height=512;
     const tctx=tc.getContext('2d');
     drawText(tctx);
@@ -459,7 +448,6 @@ function buildHologram() {
     txtPlane.position.z=0.027;
     hologramGroup.add(txtPlane);
 
-    // ── Lebegő gömb ──
     const spM=new THREE.MeshPhongMaterial({color:p.clone(),emissive:p.clone(),emissiveIntensity:0.35,transparent:true,opacity:0.18,shininess:300});
     const sp=new THREE.Mesh(new THREE.SphereGeometry(0.36,32,32),spM); sp.position.set(0,1.62,0); sp.name='sp';
     hologramGroup.add(sp); managedMats.sphere=spM;
@@ -472,7 +460,6 @@ function buildHologram() {
     const ic=new THREE.Mesh(new THREE.IcosahedronGeometry(0.52,0),iM); ic.position.copy(sp.position); ic.name='si';
     hologramGroup.add(ic); managedMats.ico=iM;
 
-    // ── Skill bárok ──
     const skills=[0.92,0.88,0.95,0.80,0.97];
     managedMats.bars=[];
     skills.forEach((v,i)=>{
@@ -485,7 +472,6 @@ function buildHologram() {
     });
 }
 
-// ── Szöveg rajzolás ──
 function drawText(ctx) {
     const bg=palette.textBg, col=palette.textColor;
     const sec='#'+palette.secondary.getHexString();
@@ -493,22 +479,18 @@ function drawText(ctx) {
 
     ctx.clearRect(0,0,1024,512);
 
-    // Háttér
     ctx.fillStyle=bg;
     rrect(ctx,6,6,1012,500,10); ctx.fill();
 
-    // Fő cím – nagy, erős árnyék
     ctx.font='bold 66px Orbitron,monospace';
     ctx.fillStyle=col; ctx.textAlign='center';
     ctx.shadowColor=col; ctx.shadowBlur=22;
     ctx.fillText('KOVÁCS AI-GÁBOR',512,140);
 
-    // Alcím
     ctx.font='23px "Share Tech Mono",monospace';
     ctx.fillStyle=sec; ctx.shadowColor=sec; ctx.shadowBlur=10;
     ctx.fillText('// LEAD AI ENGINEER  ·  NEURAL ARCHITECT //',512,195);
 
-    // Szeparátor
     ctx.shadowBlur=0;
     const gr=ctx.createLinearGradient(80,0,944,0);
     gr.addColorStop(0,'transparent'); gr.addColorStop(0.3,col+'99');
@@ -516,7 +498,6 @@ function drawText(ctx) {
     ctx.strokeStyle=gr; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(80,222); ctx.lineTo(944,222); ctx.stroke();
 
-    // Adatok
     ctx.font='21px "Share Tech Mono",monospace';
     ctx.fillStyle=col+'cc'; ctx.shadowColor=col; ctx.shadowBlur=5;
     ctx.fillText('ai@kovacs.dev   ·   Budapest, HU   ·   +36 XX XXX XXXX',512,295);
@@ -543,7 +524,6 @@ function rrect(ctx,x,y,w,h,r){
     ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
 }
 
-// ── Részecskék ──
 function buildParticles(){
     const cnt=130, pos=new Float32Array(cnt*3), col=new Float32Array(cnt*3);
     for(let i=0;i<cnt;i++){
@@ -586,7 +566,6 @@ function applyColors(){
     if(managedMats.ico)  managedMats.ico.color.copy(s);
     if(managedMats.bars) managedMats.bars.forEach((m,i)=>{ const c2=i%2===0?p:s; m.color.copy(c2); m.emissive.copy(c2); m.emissiveIntensity=0.45*gi; });
 
-    // CSS HUD frissítés
     const hex='#'+p.getHexString();
     const shex='#'+s.getHexString();
     const ahex='#'+a.getHexString();
@@ -598,13 +577,11 @@ function applyColors(){
     document.querySelectorAll('.dot').forEach(el=>{ el.style.background=hex; el.style.boxShadow=`0 0 6px ${hex}`; });
     document.querySelectorAll('.stat b').forEach(el=>el.style.color=hex);
 
-    // Gombok
     [['btn-p',ahex],['btn-c',hex],['btn-g',shex]].forEach(([id,col])=>{
         const el=document.getElementById(id); if(!el) return;
         el.style.color=col; el.style.borderColor=col+'55'; el.style.background=col+'16';
     });
 
-    // Info panel
     const ip=document.getElementById('info-panel');
     ip.style.borderColor=hex+'44'; ip.style.background=palette.textBg;
     document.getElementById('info-title').style.color=hex;
@@ -657,18 +634,23 @@ function animate(){
 // GYRO + TOUCH
 // ════════════════════════════════════════════════════════
 function setupGyro(){
-    if(typeof DeviceOrientationEvent==='undefined') return;
-    const enable=()=>{
-        window.addEventListener('deviceorientation',e=>{
-            if(e.beta===null) return;
-            gyroAvailable=true;
-            targetRotX=THREE.MathUtils.clamp((e.beta-80)*0.015,-0.6,0.6);
-            targetRotY=THREE.MathUtils.clamp(e.gamma*0.02,-0.8,0.8);
-        });
-    };
-    if(typeof DeviceOrientationEvent.requestPermission==='function'){
-        DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') enable(); }).catch(()=>{});
-    } else { enable(); }
+    // iOS JAVÍTÁS 3: Ha ez hibát dob, akkor se blokkolja az AR elindulását!
+    try {
+        if(typeof DeviceOrientationEvent==='undefined') return;
+        const enable=()=>{
+            window.addEventListener('deviceorientation',e=>{
+                if(e.beta===null) return;
+                gyroAvailable=true;
+                targetRotX=THREE.MathUtils.clamp((e.beta-80)*0.015,-0.6,0.6);
+                targetRotY=THREE.MathUtils.clamp(e.gamma*0.02,-0.8,0.8);
+            });
+        };
+        if(typeof DeviceOrientationEvent.requestPermission==='function'){
+            DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') enable(); }).catch(()=>{});
+        } else { enable(); }
+    } catch(err) {
+        console.warn("Giroszkóp engedélykérés blokkolva:", err);
+    }
 }
 
 document.addEventListener('touchstart',e=>{
