@@ -2,246 +2,186 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- Engedélyezzük a natív nagyítást (pinch-zoom), de egy jó alapmérettel indulunk -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=4.0, user-scalable=yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>KOVÁCS AI-GÁBOR // RESEARCH TOWER</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-        body{ background:#000; overflow:hidden; width:100vw; height:100vh; touch-action:none; }
+        body{ background:#000; width:100vw; height:100vh; overflow:hidden; }
         #camera-bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
-        #ar-canvas{ position:fixed; inset:0; width:100%; height:100%; z-index:10; pointer-events:none; }
         
-        /* Filmes vignette árnyék a széleken */
-        #vignette{ position:fixed; inset:0; z-index:5; pointer-events:none; background:radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.6) 100%); }
+        /* Fontos: Csak a 3D canvas blokkolja a görgetést, a UI nem! */
+        #ar-canvas{ position:fixed; inset:0; width:100%; height:100%; z-index:10; touch-action:none; }
+        
+        #vignette{ position:fixed; inset:0; z-index:5; pointer-events:none; background:radial-gradient(circle at center, transparent 30%, rgba(0,2,10,0.8) 100%); }
 
         /* ════ SPLASH ════ */
         #splash{
             position:fixed; inset:0; z-index:1000;
-            background:radial-gradient(ellipse at 50% 60%, #050d1a 0%, #000 70%);
-            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px;
+            background:radial-gradient(ellipse at 50% 60%, #050d1a 0%, #000 80%);
+            display:flex; flex-direction:column; align-items:center; justify-content:center; gap:35px;
             transition:opacity 1.2s ease, transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         #splash.hidden{ opacity:0; pointer-events:none; transform:scale(1.05); }
-        .sp-eyebrow{ font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:8px; color:#ffffff33; }
+        .sp-eyebrow{ font-family:'Share Tech Mono',monospace; font-size:12px; letter-spacing:10px; color:#ffffff44; }
         .sp-name{
-            font-family:'Cormorant Garamond',serif; font-size:clamp(36px,9vw,64px); font-weight:300;
+            font-family:'Cormorant Garamond',serif; font-size:clamp(42px,10vw,72px); font-weight:400;
             color:#fff; text-align:center; letter-spacing:8px; line-height:1.1;
-            text-shadow: 0 0 30px rgba(0,207,255,0.2);
+            text-shadow: 0 0 40px rgba(0,207,255,0.3);
         }
-        .sp-name em{ color:var(--p,#00cfff); font-style:normal; display:block; font-size:0.4em; letter-spacing:14px; margin-top:8px; font-family:'Share Tech Mono',monospace; }
-        .sp-divider{ width:80px; height:1px; background:var(--p,#00cfff); opacity:0.5; box-shadow:0 0 10px var(--p,#00cfff); }
+        .sp-name em{ color:var(--p,#00cfff); font-style:normal; display:block; font-size:0.35em; letter-spacing:16px; margin-top:12px; font-family:'Share Tech Mono',monospace; }
+        .sp-divider{ width:100px; height:2px; background:var(--p,#00cfff); opacity:0.6; box-shadow:0 0 15px var(--p,#00cfff); }
         #start-btn{
-            font-family:'Share Tech Mono',monospace; font-size:12px; letter-spacing:4px;
+            font-family:'Share Tech Mono',monospace; font-size:14px; letter-spacing:5px; font-weight:bold;
             color:#000; background:var(--p,#00cfff); border:none;
-            padding:18px 48px; cursor:pointer; text-transform:uppercase;
-            clip-path:polygon(14px 0%,100% 0%,calc(100% - 14px) 100%,0% 100%);
+            padding:20px 54px; cursor:pointer; text-transform:uppercase;
+            clip-path:polygon(16px 0%,100% 0%,calc(100% - 16px) 100%,0% 100%);
             position:relative; overflow:hidden; transition:all 0.3s;
-            box-shadow: 0 0 20px var(--pg);
+            box-shadow: 0 0 25px var(--pg);
         }
-        #start-btn:active{ opacity:0.8; transform:scale(0.96); }
+        #start-btn:active{ opacity:0.8; transform:scale(0.95); }
         #start-btn::before{
             content:''; position:absolute; inset:0;
-            background:linear-gradient(90deg,transparent,#fff6,transparent);
+            background:linear-gradient(90deg,transparent,#fff8,transparent);
             transform:translateX(-100%); animation:sh 2.5s infinite;
         }
         @keyframes sh{ to{ transform:translateX(220%); } }
-        .sp-note{ font-family:'Share Tech Mono',monospace; font-size:9px; color:#ffffff33; letter-spacing:3px; text-align:center; }
 
-        /* ════ CSS VARS (adaptív szín) ════ */
-        :root{
-            --p: #00cfff;
-            --s: #0044ff;
-            --a: #ff0066;
-            --pg: #00cfff66;
-            --pb: rgba(0,207,255,0.08);
-        }
+        /* ════ CSS VARS ════ */
+        :root{ --p: #00cfff; --s: #0044ff; --a: #ff0066; --pg: #00cfff66; --pb: rgba(0,207,255,0.08); }
 
         /* ════ HUD ════ */
         #hud{ position:fixed; inset:0; z-index:20; pointer-events:none; opacity:0; transition:opacity 1s ease 0.5s; }
         #hud.visible{ opacity:1; }
 
-        /* Sarok díszek */
-        .corner{ position:absolute; width:20px; height:20px; border-style:solid; border-color:var(--pg); transition: border-color 1s; }
-        .c-tl{ top:16px; left:16px; border-width:1px 0 0 1px; }
-        .c-tr{ top:16px; right:16px; border-width:1px 1px 0 0; }
-        .c-bl{ bottom:16px; left:16px; border-width:0 0 1px 1px; }
-        .c-br{ bottom:16px; right:16px; border-width:0 1px 1px 0; }
+        .corner{ position:absolute; width:24px; height:24px; border-style:solid; border-color:var(--pg); transition: border-color 1s; }
+        .c-tl{ top:20px; left:20px; border-width:2px 0 0 2px; }
+        .c-tr{ top:20px; right:20px; border-width:2px 2px 0 0; }
+        .c-bl{ bottom:20px; left:20px; border-width:0 0 2px 2px; }
+        .c-br{ bottom:20px; right:20px; border-width:0 2px 2px 0; }
 
-        #scanline{
-            position:absolute; top:0; left:0; right:0; height:1px;
-            background:linear-gradient(90deg,transparent,var(--p),transparent);
-            opacity:0.25; animation:scan 6s linear infinite;
-        }
-        @keyframes scan{ 0%{top:0} 100%{top:100%} }
+        #namecard{ position:absolute; top:30px; left:26px; max-width:60vw; }
+        .nc-name{ font-family:'Cormorant Garamond',serif; font-size:clamp(20px,5vw,26px); font-weight:700; color:#fff; letter-spacing:4px; text-shadow:0 0 24px var(--pg); }
+        .nc-role{ font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--p); letter-spacing:5px; margin-top:6px; font-weight:bold; }
+        .nc-sep{ width:120px; height:2px; background:linear-gradient(90deg,var(--p),transparent); margin:10px 0; opacity:0.5; }
+        
+        #statusbox{ position:absolute; top:30px; right:26px; text-align:right; }
+        .sb-r{ font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:3px; color:#ffffff66; margin-bottom:6px; }
+        .sb-r b{ color:var(--p); opacity:0.9; }
 
-        /* Névjegy – bal felső */
-        #namecard{ position:absolute; top:24px; left:20px; max-width:55vw; }
-        .nc-name{
-            font-family:'Cormorant Garamond',serif; font-size:clamp(16px,4vw,22px); font-weight:600;
-            color:#fff; letter-spacing:3px; text-shadow:0 0 24px var(--pg);
-        }
-        .nc-role{ font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--p); letter-spacing:4px; margin-top:4px; opacity:0.8; transition: color 1s; }
-        .nc-sep{ width:90px; height:1px; background:linear-gradient(90deg,var(--p),transparent); margin:8px 0; opacity:0.4; transition: background 1s; }
-        .nc-data{ font-family:'Share Tech Mono',monospace; font-size:8px; color:#ffffff55; line-height:2; letter-spacing:0.5px; }
-        .nc-data b{ color:#ffffff99; }
+        #build-ui{ position:absolute; bottom:150px; left:50%; transform:translateX(-50%); width:280px; text-align:center; transition:opacity 0.8s, transform 0.8s; }
+        #build-ui.gone{ opacity:0; pointer-events:none; transform:translate(-50%, 15px); }
+        #bp-label{ font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:5px; color:var(--p); margin-bottom:12px; font-weight:bold; }
+        #bp-track{ height:2px; background:var(--pb); position:relative; overflow:visible; }
+        #bp-fill{ position:absolute; left:0; top:0; height:2px; background:linear-gradient(90deg,var(--s),var(--p)); box-shadow:0 0 12px var(--p); width:0%; transition:width 0.4s ease; }
+        #bp-dot{ position:absolute; top:-4px; width:10px; height:10px; background:var(--p); border-radius:50%; box-shadow:0 0 15px var(--p); right:0; }
+        #bp-text{ font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:3px; color:#ffffff66; margin-top:12px; }
 
-        /* Állapot – jobb felső */
-        #statusbox{ position:absolute; top:24px; right:20px; text-align:right; }
-        .sb-r{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px; color:#ffffff33; margin-bottom:5px; }
-        .sb-r b{ color:var(--p); opacity:0.8; transition: color 1s; }
-
-        /* Adaptív mód jelző */
-        #adapt-badge{
-            position:absolute; top:58px; right:20px;
-            font-family:'Share Tech Mono',monospace; font-size:8px;
-            letter-spacing:3px; color:var(--p); opacity:0.6;
-            transition:color 1.5s ease, opacity 0.5s;
-        }
-
-        /* Build progress */
-        #build-ui{
-            position:absolute; bottom:140px; left:50%; transform:translateX(-50%);
-            width:260px; text-align:center; transition:opacity 0.8s, transform 0.8s;
-        }
-        #build-ui.gone{ opacity:0; pointer-events:none; transform:translate(-50%, 10px); }
-        #bp-label{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:4px; color:var(--p); opacity:0.9; margin-bottom:10px; transition: color 1s; }
-        #bp-track{ height:1px; background:var(--pb); position:relative; overflow:visible; }
-        #bp-fill{
-            position:absolute; left:0; top:0; height:1px;
-            background:linear-gradient(90deg,var(--s),var(--p));
-            box-shadow:0 0 10px var(--p);
-            width:0%; transition:width 0.4s ease, background 1s, box-shadow 1s;
-        }
-        #bp-dot{
-            position:absolute; top:-3px; width:7px; height:7px;
-            background:var(--p); border-radius:50%; box-shadow:0 0 12px var(--p);
-            right:0; transition:box-shadow 1.5s, background 1s;
-        }
-        #bp-text{ font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:2px; color:#ffffff44; margin-top:10px; }
-
-        /* Tap hint */
         #tap-hint{
-            position:absolute; bottom:130px; left:50%; transform:translateX(-50%);
-            font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:5px;
-            color:#ffffff55; white-space:nowrap; opacity:0; transition:opacity 1s;
-            pointer-events:none; text-shadow: 0 0 10px rgba(255,255,255,0.2);
+            position:absolute; bottom:140px; left:50%; transform:translateX(-50%);
+            font-family:'Share Tech Mono',monospace; font-size:12px; letter-spacing:6px; font-weight:bold;
+            color:#ffffff88; white-space:nowrap; opacity:0; transition:opacity 1s;
+            pointer-events:none; text-shadow: 0 0 15px rgba(255,255,255,0.3);
         }
         #tap-hint.show{ opacity:1; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
-        /* ════ PROJEKT KÁRTYA PANEL ════ */
+        /* ════ PROJEKT KÁRTYA PANEL (MODAL) ════ */
+        /* Láthatatlan háttér, ami bezárja a modalt, ha mellékattintanak */
+        #modal-backdrop {
+            position: fixed; inset: 0; z-index: 25; display: none;
+            background: rgba(0,0,0,0.1); /* Szinte láthatatlan, de felfogja a kattintást */
+        }
+        #modal-backdrop.open { display: block; }
+
         #proj-panel{
             position:absolute; bottom:0; left:0; right:0; z-index:30;
-            pointer-events:all;
+            pointer-events:none; /* Alapból ne fogja meg az eseményeket */
             transform:translateY(100%);
-            transition:transform 0.6s cubic-bezier(0.2, 1, 0.3, 1);
+            transition:transform 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+            display: flex; flex-direction: column; justify-content: flex-end;
+            max-height: 85vh; /* Hogy kiférjen a képernyőn, ha sok a szöveg */
         }
-        #proj-panel.open{ transform:translateY(0); }
+        #proj-panel.open{ 
+            transform:translateY(0); 
+            pointer-events:all; /* Ha nyitva van, legyen interaktív */
+        }
 
-        /* Üveg háttér - Finomított Glassmorphism */
         .pp-glass{
-            background:linear-gradient(to top, rgba(0,4,12,0.95) 0%, rgba(2,6,18,0.85) 60%, rgba(5,10,25,0.6) 100%);
-            backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px);
-            border-top:1px solid var(--pg);
-            padding:24px 20px 32px;
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+            background:linear-gradient(to top, rgba(0,4,12,0.98) 0%, rgba(2,6,18,0.92) 70%, rgba(5,10,25,0.85) 100%);
+            backdrop-filter:blur(40px); -webkit-backdrop-filter:blur(40px);
+            border-top:2px solid var(--pg);
+            padding:30px 25px 40px;
+            box-shadow: 0 -15px 50px rgba(0,0,0,0.8);
+            overflow-y: auto; /* Görgethetővé teszi a belső tartalmat */
+            touch-action: pan-y; /* Engedi a natív vertikális görgetést */
         }
 
-        /* Navigáció – mini kártyák */
-        #floor-nav{
-            display:flex; gap:8px; margin-bottom:20px; overflow-x:auto;
-            scrollbar-width:none; -webkit-overflow-scrolling:touch;
-            padding-bottom:4px;
-        }
+        #floor-nav{ display:flex; gap:12px; margin-bottom:25px; overflow-x:auto; scrollbar-width:none; padding-bottom:6px; }
         #floor-nav::-webkit-scrollbar{ display:none; }
         .fn-card{
-            flex-shrink:0; width:56px; padding:10px 6px; text-align:center;
-            border:1px solid #ffffff15; cursor:pointer;
-            transition:border-color 0.4s, background 0.4s, transform 0.3s cubic-bezier(0.2,1,0.3,1);
-            clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
-            background: rgba(255,255,255,0.01);
+            flex-shrink:0; width:70px; padding:12px 8px; text-align:center;
+            border:1px solid #ffffff22; cursor:pointer;
+            transition:all 0.3s; clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+            background: rgba(255,255,255,0.02);
         }
-        .fn-card.active{
-            border-color:var(--p) !important;
-            background:var(--pb) !important;
-            transform:translateY(-4px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .fn-card:active{ transform:scale(0.92); }
-        .fn-num{ font-family:'Orbitron',sans-serif; font-size:10px; font-weight:700; margin-bottom:5px; line-height:1; }
-        .fn-dot{ width:5px; height:5px; border-radius:50%; margin:0 auto; }
-        .fn-name{ font-family:'Share Tech Mono',monospace; font-size:7px; letter-spacing:1px; color:#ffffff66; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .fn-card.active{ border-color:var(--p) !important; background:var(--pb) !important; transform:translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.4); }
+        .fn-num{ font-family:'Orbitron',sans-serif; font-size:14px; font-weight:900; margin-bottom:6px; line-height:1; }
+        .fn-dot{ width:6px; height:6px; border-radius:50%; margin:0 auto; }
+        .fn-name{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:1px; color:#ffffff88; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-        /* Projekt tartalom */
-        .pp-header{ display:flex; align-items:flex-start; gap:14px; margin-bottom:16px; }
+        .pp-header{ display:flex; align-items:flex-start; gap:18px; margin-bottom:20px; }
         #pp-badge{
-            font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900;
-            width:48px; height:48px; border-radius:4px; flex-shrink:0;
+            font-family:'Orbitron',sans-serif; font-size:26px; font-weight:900;
+            width:60px; height:60px; border-radius:6px; flex-shrink:0;
             display:flex; align-items:center; justify-content:center;
-            border:1px solid var(--pg); color:var(--p);
-            background:var(--pb); line-height:1;
-            transition:color 0.5s, border-color 0.5s, background 0.5s, box-shadow 0.5s;
-            box-shadow: inset 0 0 15px var(--pb);
+            border:2px solid var(--pg); color:var(--p); background:var(--pb);
+            box-shadow: inset 0 0 20px var(--pb);
         }
         .pp-titles{ flex:1; min-width:0; }
-        #pp-name{
-            font-family:'Cormorant Garamond',serif; font-size:clamp(20px,5.5vw,28px); font-weight:600;
-            color:#fff; letter-spacing:3px; line-height:1.1;
-            transition:color 0.5s, text-shadow 0.5s;
-        }
-        #pp-sub{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:3px; margin-top:6px; opacity:0.8; transition:color 0.5s; }
+        #pp-name{ font-family:'Cormorant Garamond',serif; font-size:clamp(26px,7vw,36px); font-weight:700; color:#fff; letter-spacing:3px; line-height:1.1; }
+        #pp-sub{ font-family:'Share Tech Mono',monospace; font-size:12px; letter-spacing:4px; margin-top:8px; opacity:0.9; font-weight:bold; }
 
-        /* Nav gombok a panelen belül */
-        .pp-nav{ display:flex; gap:10px; margin-left:auto; align-self:center; }
+        .pp-nav{ display:flex; gap:12px; margin-left:auto; align-self:center; }
         .pp-nav-btn{
-            font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:1px;
-            width:36px; height:32px; border:1px solid var(--pg); background:rgba(0,0,0,0.3);
-            color:var(--p); cursor:pointer; display:flex; align-items:center; justify-content:center;
-            clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
-            transition:background 0.3s, transform 0.2s; flex-shrink:0;
+            font-family:'Share Tech Mono',monospace; font-size:14px; width:44px; height:40px; 
+            border:1px solid var(--pg); background:rgba(0,0,0,0.5); color:var(--p); 
+            cursor:pointer; display:flex; align-items:center; justify-content:center;
+            clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
         }
-        .pp-nav-btn:active{ background:var(--pb); transform:scale(0.9); }
-        #pp-close-btn{
-            font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:3px;
-            color:#ffffff44; border:1px solid #ffffff15; background:rgba(0,0,0,0.2);
-            padding:6px 12px; cursor:pointer;
-            clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
-            transition: color 0.3s, border-color 0.3s;
-        }
-        #pp-close-btn:active{ color:#fff; border-color:#ffffff55; }
-
+        
+        /* Óriási és olvasható leírás szöveg */
         #pp-desc{
-            font-family:'Cormorant Garamond',serif; font-size:clamp(14px,3.8vw,17px);
-            font-weight:400; color:#ffffffcc; line-height:1.8; letter-spacing:0.4px;
-            margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid #ffffff11;
+            font-family:'Cormorant Garamond',serif; font-size:clamp(18px,5vw,24px);
+            font-weight:400; color:#ffffffee; line-height:1.7; letter-spacing:0.5px;
+            margin-bottom:25px; padding-bottom:25px; border-bottom:1px solid #ffffff22;
         }
-        .pp-tech{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }
+        
+        .pp-tech{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:25px; }
         .tag{
-            font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:2px;
-            padding:5px 10px; border:1px solid var(--pg); color:var(--p);
-            background:var(--pb); opacity:0.9;
-            clip-path:polygon(3px 0%,100% 0%,calc(100% - 3px) 100%,0% 100%);
-            transition:color 0.5s, border-color 0.5s, background 0.5s;
-        }
-        .pp-stats{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-        .sbox{
-            text-align:center; padding:12px 4px;
-            border:1px solid #ffffff11; background:rgba(255,255,255,0.015);
-            transition:border-color 0.5s, background 0.5s;
+            font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:3px; font-weight:bold;
+            padding:8px 14px; border:1px solid var(--pg); color:var(--p); background:var(--pb);
             clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
         }
-        .sbox.active-box{ border-color:var(--pg); background:var(--pb); }
-        .sv{ font-family:'Orbitron',sans-serif; font-size:16px; font-weight:700; color:var(--p); transition:color 0.5s; text-shadow: 0 0 10px var(--pg); }
-        .sl{ font-family:'Share Tech Mono',monospace; font-size:7px; letter-spacing:2px; color:#ffffff44; margin-top:4px; }
+        
+        .pp-stats{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom: 20px;}
+        .sbox{ text-align:center; padding:16px 6px; border:1px solid #ffffff15; background:rgba(255,255,255,0.02); clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%); }
+        .sv{ font-family:'Orbitron',sans-serif; font-size:22px; font-weight:900; color:var(--p); text-shadow: 0 0 15px var(--pg); }
+        .sl{ font-family:'Share Tech Mono',monospace; font-size:10px; font-weight:bold; letter-spacing:3px; color:#ffffff66; margin-top:6px; }
 
-        /* ════ ERROR ════ */
-        #error-msg{ position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:2000; background:#000000f5; padding:32px; text-align:center; }
-        #error-msg.show{ display:flex; }
-        #error-msg h2{ font-family:'Orbitron',sans-serif; color:#ff3355; font-size:16px; letter-spacing:4px; }
-        #error-msg p{ font-family:'Share Tech Mono',monospace; color:#ffffff55; font-size:11px; line-height:2.2; max-width:320px; }
-        #err-detail{ color:#ff335544; font-size:9px; margin-top:10px; display:block; padding: 10px; background: rgba(255,51,85,0.05); border-radius: 4px;}
+        /* Hatalmas, egyértelmű VISSZA gomb */
+        #pp-close-btn-large {
+            width: 100%; padding: 18px; margin-top: 10px;
+            font-family: 'Share Tech Mono', monospace; font-size: 14px; font-weight: bold; letter-spacing: 6px;
+            color: #fff; background: rgba(255,255,255,0.05); border: 1px solid #ffffff33;
+            cursor: pointer; text-align: center; transition: all 0.3s;
+            clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+        }
+        #pp-close-btn-large:active { background: rgba(255,255,255,0.15); border-color: #fff; }
+
     </style>
 </head>
 <body>
@@ -270,7 +210,6 @@
         <div class="sb-r">AR <b>AKTÍV</b></div>
         <div class="sb-r" id="sb-clock">--:--</div>
     </div>
-    <div id="adapt-badge">CYBER</div>
 
     <div id="build-ui">
         <div id="bp-label">RESEARCH TOWER ÉPÜL</div>
@@ -280,31 +219,36 @@
     <div id="tap-hint">// KOPPINTS EGY EMELETRE //</div>
 </div>
 
+<!-- Láthatatlan réteg a modal bezárásához -->
+<div id="modal-backdrop" onclick="closePanel()"></div>
+
 <!-- Projekt panel -->
 <div id="proj-panel">
     <div class="pp-glass">
         <div id="floor-nav"></div>
+        
         <div class="pp-header">
             <div id="pp-badge">01</div>
             <div class="pp-titles">
                 <div id="pp-name">–</div>
                 <div id="pp-sub">–</div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
-                <button id="pp-close-btn" onclick="closePanel()">✕ BEZÁR</button>
-                <div class="pp-nav">
-                    <button class="pp-nav-btn" onclick="navFloor(-1)">‹</button>
-                    <button class="pp-nav-btn" onclick="navFloor(+1)">›</button>
-                </div>
+            <div class="pp-nav">
+                <button class="pp-nav-btn" onclick="navFloor(-1)">‹</button>
+                <button class="pp-nav-btn" onclick="navFloor(+1)">›</button>
             </div>
         </div>
+        
         <div id="pp-desc">–</div>
         <div class="pp-tech" id="pp-tech"></div>
+        
         <div class="pp-stats">
             <div class="sbox"><div class="sv" id="sv1">–</div><div class="sl" id="sl1">–</div></div>
             <div class="sbox"><div class="sv" id="sv2">–</div><div class="sl" id="sl2">–</div></div>
             <div class="sbox"><div class="sv" id="sv3">–</div><div class="sl" id="sl3">–</div></div>
         </div>
+
+        <button id="pp-close-btn-large" onclick="closePanel()">✕ VISSZA A TORONYHOZ</button>
     </div>
 </div>
 
@@ -314,13 +258,6 @@
     <div class="sp-name">RESEARCH<br>TOWER<em>KOVÁCS AI-GÁBOR</em></div>
     <div class="sp-divider"></div>
     <button id="start-btn" onclick="startAR()">TORONY MEGÉPÍTÉSE</button>
-    <div class="sp-note">kamera szükséges  ·  tájkép ajánlott</div>
-</div>
-
-<div id="error-msg">
-    <h2>// KAMERA HIBA</h2>
-    <p>Engedélyezd a kamerát, majd töltsd újra.<br><br>iOS: Beállítások → Safari → Kamera → Engedélyezés</p>
-    <code id="err-detail"></code>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -366,25 +303,20 @@ const FLOORS = [
 // ════════════════════════════════════════════════════════════
 let scene, camera, renderer, raycaster, mouse;
 let towerGroup, floorGroups=[];
-let buildPhase='idle', builtCount=0;
+let buildPhase='idle';
 let selectedFloor=-1, panelOpen=false;
 
 // Kamera
 let gyroAvail=false, tRotX=0, tRotY=0, cRotX=0, cRotY=0;
 let touchX=0, touchY=0, touchMoved=false;
-let zoomT=1, zoomC=1, pinchD0=0, pinchZ0=1;
-const ZMIN=0.5, ZMAX=4;
 
-// Adaptív szín
-let sampleCanvas, sampleCtx, lastSample=0;
-let palP=new THREE.Color(0x00cfff), palS=new THREE.Color(0x0044ff), palA=new THREE.Color(0xff0066);
-let palPT=new THREE.Color(0x00cfff), palST=new THREE.Color(0x0044ff), palAT=new THREE.Color(0xff0066);
+// Színek
+let palP=new THREE.Color(0x00cfff), palPT=new THREE.Color(0x00cfff);
 let adaptMats=[]; 
 
-// Épület paraméterek - Zaha Hadid stílusú organikus torony
-const FH=0.6, FW=1.3, BASE_Y=-1.8;
-const TWIST_ANGLE = 0.45; // Radian / szint csavarodás
-const BUILD_S=16; // mp
+// Épület dimenziók - Masszívabb, részletgazdagabb torony
+const FH=0.65, FW=1.4, BASE_Y=-1.8;
+const BUILD_S=16; 
 
 // ════════════════════════════════════════════════════════════
 // INDÍTÁS
@@ -393,10 +325,6 @@ async function startAR(){
     try{
         const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
         document.getElementById('camera-bg').srcObject=stream;
-
-        sampleCanvas=document.createElement('canvas');
-        sampleCanvas.width=64; sampleCanvas.height=36;
-        sampleCtx=sampleCanvas.getContext('2d',{willReadFrequently:true});
 
         initThree();
         buildFloorNav();
@@ -409,51 +337,64 @@ async function startAR(){
         setInterval(()=>{ const e=document.getElementById('sb-clock'); if(e) e.textContent=new Date().toTimeString().slice(0,5); },1000);
 
     }catch(err){
-        document.getElementById('err-detail').textContent=err.name+': '+err.message;
-        document.getElementById('error-msg').classList.add('show');
+        alert("Kamera hiba: Engedélyezd a kamerát a böngészőben!");
         document.getElementById('splash').style.display='none';
     }
 }
 
 // ════════════════════════════════════════════════════════════
-// THREE INIT
+// THREE INIT - MOZISZERŰ FÉNYELÉS ÉS ÁRNYÉKOK
 // ════════════════════════════════════════════════════════════
 function initThree(){
     const canvas=document.getElementById('ar-canvas');
     const W=window.innerWidth, H=window.innerHeight;
     
-    renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,premultipliedAlpha:false});
+    renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
     renderer.setSize(W,H); 
     renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-    renderer.setClearColor(0x000000, 0); // Teljesen átlátszó az AR miatt
+    renderer.setClearColor(0x000000, 0); 
+    
+    // ÁRNYÉKOK BEKAPCSOLÁSA (Cinematic look)
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
     scene=new THREE.Scene();
-    camera=new THREE.PerspectiveCamera(50,W/H,0.1,200);
-    camera.position.set(0,1,6.5);
-    camera.lookAt(0,1,0);
+    
+    // KÖD (Atmoszférikus mélység)
+    scene.fog = new THREE.FogExp2(0x000511, 0.035);
+
+    camera=new THREE.PerspectiveCamera(52,W/H,0.1,200);
+    camera.position.set(0, 0.5, 7.5);
+    camera.lookAt(0, 1.2, 0);
     
     raycaster=new THREE.Raycaster(); mouse=new THREE.Vector2();
 
-    // ── Prémium Fényelés a Fizikai anyagokhoz ──
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+    // ── Filmes Fényelés (Key, Fill, Rim) ──
+    scene.add(new THREE.AmbientLight(0xffffff, 0.25));
     
-    const key=new THREE.DirectionalLight(0xffddaa, 1.2); 
-    key.position.set(-3, 8, 5); 
-    scene.add(key);
+    // Főfény, meleg narancssárga, vet árnyékot
+    const keyLight = new THREE.DirectionalLight(0xffddaa, 1.5); 
+    keyLight.position.set(-4, 10, 6); 
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 1024;
+    keyLight.shadow.mapSize.height = 1024;
+    keyLight.shadow.bias = -0.001;
+    scene.add(keyLight);
     
-    const rim=new THREE.DirectionalLight(0x4488ff, 1.5); 
-    rim.position.set(4, 2, -5); 
-    scene.add(rim);
+    // Hátsó éles kék peremfény (Rim light)
+    const rimLight = new THREE.DirectionalLight(0x00cfff, 1.8); 
+    rimLight.position.set(5, 3, -6); 
+    scene.add(rimLight);
 
-    // Kék derítés alulról
-    const fill = new THREE.PointLight(0x00cfff, 0.8, 10);
-    fill.position.set(0, BASE_Y, 2);
-    scene.add(fill);
+    // Alsó derítés a sötét részekhez
+    const fillLight = new THREE.PointLight(0x4466ff, 1.0, 15);
+    fillLight.position.set(0, BASE_Y + 1, 4);
+    scene.add(fillLight);
 
     towerGroup=new THREE.Group(); scene.add(towerGroup);
 
     buildGround();
-    buildFloors();
+    buildCinematicFloors(); // Új, részletgazdag generátor
     setupGyro();
 
     window.addEventListener('resize',()=>{
@@ -462,158 +403,121 @@ function initThree(){
     });
 }
 
-// ── Talaj: Komplex technológiai mandala ──
 function buildGround(){
     const gGroup = new THREE.Group();
     gGroup.position.y = BASE_Y;
     scene.add(gGroup);
 
-    // Finom rács
-    const grid = new THREE.GridHelper(16, 32, 0x00cfff, 0x002255);
-    grid.material.transparent=true; grid.material.opacity=0.15;
-    gGroup.add(grid);
+    // Masszív alaplemez, ami fogadja az árnyékokat
+    const baseGeo = new THREE.CylinderGeometry(4, 4, 0.1, 32);
+    const baseMat = new THREE.MeshStandardMaterial({color: 0x111111, roughness: 0.9, metalness: 0.2});
+    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.position.y = -0.05;
+    baseMesh.receiveShadow = true;
+    gGroup.add(baseMesh);
 
-    // Izzó fókusz karikák
-    const r1=mkRing(1.2, 0.015, 0x00cfff, 0.8); r1.name='r1'; gGroup.add(r1);
-    const r2=mkRing(2.0, 0.005, 0x0044ff, 0.4); r2.name='r2'; gGroup.add(r2);
+    // Izzó fókusz karikák a földön
+    const r1 = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.015, 16, 100), new THREE.MeshBasicMaterial({color:0x00cfff, transparent:true, opacity:0.8}));
+    r1.rotation.x = Math.PI/2; r1.position.y = 0.02; r1.name='r1'; gGroup.add(r1);
     
-    // Szaggatott techno gyűrű
-    const dashGeo = new THREE.RingGeometry(1.6, 1.62, 64);
-    const dashMat = new THREE.MeshBasicMaterial({color:0xff0066, transparent:true, opacity:0.5, side:THREE.DoubleSide});
-    const dash = new THREE.Mesh(dashGeo, dashMat);
-    dash.rotation.x = -Math.PI/2; dash.position.y = 0.01;
-    dash.name='r3'; gGroup.add(dash);
+    const r2 = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.005, 16, 100), new THREE.MeshBasicMaterial({color:0x0044ff, transparent:true, opacity:0.4}));
+    r2.rotation.x = Math.PI/2; r2.position.y = 0.02; r2.name='r2'; gGroup.add(r2);
 
     adaptMats.push({mat:r1.material,role:'p'});
-    adaptMats.push({mat:r2.material,role:'s'});
-    adaptMats.push({mat:dashMat,role:'a'});
-
-    // Talaj lebegő részecskék
-    const cnt=400, pos=new Float32Array(cnt*3);
-    for(let i=0;i<cnt;i++){ 
-        const r = 1.5 + Math.random()*8;
-        const th = Math.random()*Math.PI*2;
-        pos[i*3]=Math.cos(th)*r; 
-        pos[i*3+1]=(Math.random()-.5)*0.8; 
-        pos[i*3+2]=Math.sin(th)*r; 
-    }
-    const pg=new THREE.BufferGeometry(); pg.setAttribute('position',new THREE.BufferAttribute(pos,3));
-    const pm=new THREE.PointsMaterial({color:0x00cfff, size:0.03, transparent:true, opacity:0.6, blending: THREE.AdditiveBlending});
-    gGroup.add(new THREE.Points(pg,pm)); 
-    adaptMats.push({mat:pm,role:'p'});
 }
 
-function mkRing(r,t,col,op){
-    const m=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op});
-    const mesh = new THREE.Mesh(new THREE.TorusGeometry(r,t,16,100),m);
-    mesh.rotation.x = Math.PI/2; mesh.position.y = 0.01;
-    return mesh;
-}
-
-// ── Parametrikus megcsavart geometria generátor ──
-// Létrehoz egy hengert, aminek a csúcsai Y tengely mentén meg vannak csavarva.
-function createTwistedCylinder(rBot, rTop, height, segments, twistAngle) {
-    const geo = new THREE.CylinderGeometry(rTop, rBot, height, segments, 4, false);
-    const pos = geo.attributes.position;
-    for(let j=0; j<pos.count; j++){
-        const y = pos.getY(j);
-        // y: -height/2 től height/2 ig
-        const normY = y / height; 
-        // A szint teteje +twistAngle/2-vel, alja -twistAngle/2-vel csavarodik
-        const angle = normY * twistAngle; 
-        
-        const x = pos.getX(j);
-        const z = pos.getZ(j);
-        
-        // Elforgatás mátrix Y tengely körül
-        const nx = x * Math.cos(angle) - z * Math.sin(angle);
-        const nz = x * Math.sin(angle) + z * Math.cos(angle);
-        
-        pos.setX(j, nx);
-        pos.setZ(j, nz);
-    }
-    geo.computeVertexNormals();
-    return geo;
-}
-
-// ── Organikus Üveg Torony ──
-function buildFloors(){
-    const gap = 0.04; // Rés a szintek között
+// ── ÚJ: Moziszerű, Részletgazdag Építészet (Cinematic Architecture) ──
+function buildCinematicFloors(){
+    const gap = 0.05; 
     const actualFH = FH - gap;
+
+    // Közös anyagok a teljes toronyhoz
+    const slabMat = new THREE.MeshStandardMaterial({color: 0x2a2a2a, metalness: 0.7, roughness: 0.6}); // Sötét fém födém
+    const coreMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.8, roughness: 0.8}); // Beton/Matt fém mag
+    const pillarMat = new THREE.MeshStandardMaterial({color: 0x1a1a1a, metalness: 0.9, roughness: 0.4}); // Csillogóbb tartóoszlopok
 
     FLOORS.forEach((data,i)=>{
         const group=new THREE.Group();
         
-        // Sugár számítása folyamatos szűküléshez (exponenciális)
-        const radBot = FW * Math.pow(0.86, i);
-        const radTop = FW * Math.pow(0.86, i+1);
-
-        // A csoport elforgatása szintenként, hogy a csavarodás folytonos legyen
-        group.rotation.y = i * TWIST_ANGLE;
+        // Felfelé enyhén szűkülő, stabil profil
+        const radius = FW * Math.pow(0.92, i);
+        
         group.position.set(0, BASE_Y + (i + 0.5) * FH, 0);
         group.scale.set(1,0.001,1); // Inicializáláshoz összenyomva
 
-        // 1. Fő Kristály/Üveg Test (Fizikai anyag!)
-        const glassGeo = createTwistedCylinder(radBot, radTop, actualFH, 8, TWIST_ANGLE);
-        // Elliptikussá lapítjuk, így a csavarodás drámai lesz
-        glassGeo.scale(1, 1, 0.5); 
+        // 1. Alsó Födémlemez (Slab) - Árnyékot vet és kap
+        const slabGeo = new THREE.CylinderGeometry(radius, radius, 0.08, 16);
+        const slab = new THREE.Mesh(slabGeo, slabMat);
+        slab.position.y = -actualFH/2 + 0.04;
+        slab.castShadow = true; slab.receiveShadow = true;
+        group.add(slab);
 
+        // 2. Fő Üvegfüggöny (Curtain Wall) - Sötét, nagyon tükröződő üveg
+        const glassRadius = radius * 0.88;
+        const glassGeo = new THREE.CylinderGeometry(glassRadius, glassRadius, actualFH - 0.08, 16);
         const glassMat = new THREE.MeshPhysicalMaterial({
-            color: new THREE.Color(data.hex).multiplyScalar(0.2),
-            emissive: new THREE.Color(data.hex),
-            emissiveIntensity: 0.15,
-            metalness: 0.9,
-            roughness: 0.15,
-            clearcoat: 1.0,
-            clearcoatRoughness: 0.1,
-            transparent: true, 
-            opacity: 0.55,
-            side: THREE.DoubleSide
+            color: 0x02050a, 
+            emissive: new THREE.Color(data.hex), 
+            emissiveIntensity: 0.02, // Finom alap derengés
+            metalness: 0.9, roughness: 0.05, clearcoat: 1.0, 
+            transparent: true, opacity: 0.85
         });
         const glass=new THREE.Mesh(glassGeo, glassMat);
+        glass.castShadow = true; glass.receiveShadow = true;
         group.add(glass);
-        glass.userData={fi:i};
+        glass.userData={fi:i}; // Klikkelés érzékeléshez
         adaptMats.push({mat:glassMat, role:'p', floorIdx:i});
 
-        // 2. Acél Élek (Wireframe) - Kiemeli a geometriát
-        const edgeMat=new THREE.LineBasicMaterial({color:data.hex, transparent:true, opacity:0.4});
-        const edges=new THREE.LineSegments(new THREE.EdgesGeometry(glassGeo),edgeMat);
-        group.add(edges);
-        adaptMats.push({mat:edgeMat, role:'p', floorIdx:i});
+        // 3. Belső Mag (Elevator Core) - Átlátszik az üvegen
+        const coreGeo = new THREE.CylinderGeometry(radius*0.35, radius*0.35, actualFH, 8);
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        core.castShadow = true; core.receiveShadow = true;
+        group.add(core);
 
-        // 3. Izzó Szint-Elválasztó Gyűrű a résben
-        const ringGeo = createTwistedCylinder(radBot*0.98, radBot*1.02, gap, 16, 0);
-        ringGeo.scale(1, 1, 0.5);
-        const stripMat=new THREE.MeshBasicMaterial({color:data.hex, transparent:true, opacity:0.9, blending: THREE.AdditiveBlending});
-        const strip=new THREE.Mesh(ringGeo, stripMat);
+        // 4. Vízszintes ablakosztók (Mullions) - Skálanövelő részletek
+        for(let w=1; w<=3; w++){
+            const hFrameGeo = new THREE.TorusGeometry(glassRadius, 0.012, 8, 32);
+            const hFrame = new THREE.Mesh(hFrameGeo, pillarMat);
+            hFrame.rotation.x = Math.PI/2;
+            hFrame.position.y = -actualFH/2 + (actualFH/4)*w;
+            hFrame.castShadow = true; hFrame.receiveShadow = true;
+            group.add(hFrame);
+        }
+
+        // 5. Külső Teherhordó Exoskeleton (Pillars)
+        const pillarCount = 8;
+        for(let p=0; p<pillarCount; p++){
+            const ang = (p/pillarCount)*Math.PI*2 + (i%2===0 ? 0 : Math.PI/pillarCount); // Szintenként elforgatva
+            const pGeo = new THREE.CylinderGeometry(0.025, 0.025, actualFH, 8);
+            const pillar = new THREE.Mesh(pGeo, pillarMat);
+            pillar.position.set(Math.cos(ang)*radius*0.96, 0, Math.sin(ang)*radius*0.96);
+            pillar.castShadow = true; pillar.receiveShadow = true;
+            group.add(pillar);
+        }
+
+        // 6. Vastag, izzó Adat-Gyűrű a résben (Neon Strip)
+        const ringGeo = new THREE.CylinderGeometry(radius*0.95, radius*0.95, gap*0.6, 32);
+        const stripMat = new THREE.MeshBasicMaterial({color:data.hex, transparent:true, opacity:0.9, blending: THREE.AdditiveBlending});
+        const strip = new THREE.Mesh(ringGeo, stripMat);
         strip.position.y = -actualFH/2 - gap/2;
         group.add(strip);
         adaptMats.push({mat:stripMat,role:'p',floorIdx:i});
 
-        // 4. Belső Energia Mag (Core)
-        const coreGeo = new THREE.CylinderGeometry(0.06, 0.06, FH, 16);
-        const coreMat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.3, blending: THREE.AdditiveBlending});
-        const core = new THREE.Mesh(coreGeo, coreMat);
-        group.add(core);
-
-        // 5. Lebegő Adatrészecskék (Minden szint körül saját pályán)
-        const pGroup = new THREE.Group();
-        const pCnt = 15;
-        for(let p=0; p<pCnt; p++){
-            const mote = new THREE.Mesh(
-                new THREE.OctahedronGeometry(0.015),
-                new THREE.MeshBasicMaterial({color:data.hex, transparent:true, opacity:0.8})
-            );
-            const a = (p/pCnt)*Math.PI*2;
-            const r = radBot * 0.8 + Math.random()*0.4;
-            mote.position.set(Math.cos(a)*r, (Math.random()-0.5)*actualFH, Math.sin(a)*r);
-            mote.userData = {a: a, r: r, speed: 0.5+Math.random()};
-            pGroup.add(mote);
+        // 7. Apró ablakfények / Greebles (Moziszerű részletek)
+        const lightGroup = new THREE.Group();
+        for(let l=0; l<12; l++){
+            const lGeo = new THREE.BoxGeometry(0.04, 0.02, 0.02);
+            const lMat = new THREE.MeshBasicMaterial({color: 0xffffff, transparent:true, opacity: 0.6 + Math.random()*0.4});
+            const light = new THREE.Mesh(lGeo, lMat);
+            const a = Math.random() * Math.PI * 2;
+            light.position.set(Math.cos(a)*glassRadius, (Math.random()-0.5)*actualFH*0.8, Math.sin(a)*glassRadius);
+            light.rotation.y = -a;
+            lightGroup.add(light);
         }
-        group.add(pGroup);
+        group.add(lightGroup);
 
         towerGroup.add(group);
-        floorGroups.push({group, glass, glassMat, stripMat, edgeMat, pGroup, data, built:false, exScale:1, exY:0});
+        floorGroups.push({group, glass, glassMat, stripMat, lightGroup, data, built:false, exScale:1, exY:0});
     });
 
     buildAntenna();
@@ -621,25 +525,28 @@ function buildFloors(){
 
 function buildAntenna(){
     const topY=BASE_Y+FLOORS.length*FH;
-    const rTop = FW * Math.pow(0.86, FLOORS.length);
+    const rTop = FW * Math.pow(0.92, FLOORS.length);
     
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.01, rTop*0.4, 0.2, 8), new THREE.MeshPhysicalMaterial({color:0x222222, metalness:0.9, roughness:0.2, transparent:true, opacity:0}));
-    base.position.set(0, topY+0.1, 0); base.name='antBase'; scene.add(base);
+    // Antennatalp
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(rTop*0.2, rTop*0.6, 0.3, 16), new THREE.MeshStandardMaterial({color:0x222222, metalness:0.8, roughness:0.5, transparent:true, opacity:0}));
+    base.position.set(0, topY+0.15, 0); base.name='antBase'; base.castShadow = true; scene.add(base);
 
-    const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.01, 1.8, 8),new THREE.MeshBasicMaterial({color:0x88ccff,transparent:true,opacity:0}));
-    rod.position.set(0,topY+1.1,0); rod.name='antRod'; scene.add(rod);
+    // Rúd
+    const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.02, 2.0, 8),new THREE.MeshStandardMaterial({color:0x88ccff, metalness:1, roughness:0.2, transparent:true,opacity:0}));
+    rod.position.set(0,topY+1.1,0); rod.name='antRod'; rod.castShadow = true; scene.add(rod);
 
-    const tip=new THREE.Mesh(new THREE.OctahedronGeometry(0.06),new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0, wireframe:true}));
-    tip.position.set(0,topY+2.0,0); tip.name='antTip'; scene.add(tip);
+    // Adóegység a tetején
+    const tip=new THREE.Mesh(new THREE.OctahedronGeometry(0.08),new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0, wireframe:true}));
+    tip.position.set(0,topY+2.2,0); tip.name='antTip'; scene.add(tip);
 
-    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.25,16,16),new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0, blending:THREE.AdditiveBlending, depthWrite:false}));
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.3,16,16),new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0, blending:THREE.AdditiveBlending, depthWrite:false}));
     glow.position.copy(tip.position); glow.name='antGlow'; scene.add(glow);
     
     adaptMats.push({mat:rod.material,role:'p'},{mat:tip.material,role:'p'},{mat:glow.material,role:'p'});
 }
 
 // ════════════════════════════════════════════════════════════
-// BUILD ANIMÁCIÓ – cinematic
+// BUILD ANIMÁCIÓ
 // ════════════════════════════════════════════════════════════
 function startBuild(){
     buildPhase='building';
@@ -677,23 +584,23 @@ function setProgress(pct,txt){
 function animFloorIn(idx,cb){
     const fm=floorGroups[idx];
     const targetY=BASE_Y+(idx+0.5)*FH;
-    fm.group.position.y=targetY+3.0; // Magasabbról esik
+    fm.group.position.y=targetY+4.0; // Magasabbról zuhan be
     fm.group.scale.set(1,0.01,1);
     fm.built=true;
 
-    const dur=900, t0=Date.now();
+    const dur=1000, t0=Date.now();
     function step(){
         const t=Math.min((Date.now()-t0)/dur,1);
-        const e=easeOutBack(t); // Pattanós landolás
+        const e=easeOutBack(t); 
         
-        fm.group.position.y=(targetY+3.0)*(1-e)+targetY*e;
+        fm.group.position.y=(targetY+4.0)*(1-e)+targetY*e;
         fm.group.scale.y=Math.max(0.01, easeOutCubic(t));
         
-        // Flash glow érkezéskor
-        fm.glassMat.emissiveIntensity = 0.15 + Math.sin(t*Math.PI)*0.4;
+        // Becsapódási villanás
+        fm.glassMat.emissiveIntensity = 0.02 + Math.sin(t*Math.PI)*0.5;
         
         if(t<1) requestAnimationFrame(step);
-        else{ fm.group.position.y=targetY; fm.group.scale.set(1,1,1); fm.glassMat.emissiveIntensity=0.15; if(cb) cb(); }
+        else{ fm.group.position.y=targetY; fm.group.scale.set(1,1,1); fm.glassMat.emissiveIntensity=0.02; if(cb) cb(); }
     }
     step();
 }
@@ -707,10 +614,10 @@ function animAntenna(){
     function step(){
         const time=Math.min((Date.now()-t0)/dur,1);
         const e=easeOutCubic(time);
-        if(b) b.material.opacity=e*0.8;
-        if(r) r.material.opacity=e*0.9;
+        if(b) b.material.opacity=e;
+        if(r) r.material.opacity=e;
         if(t) t.material.opacity=e;
-        if(g) g.material.opacity=e*0.3;
+        if(g) g.material.opacity=e*0.4;
         if(time<1) requestAnimationFrame(step);
     }
     step();
@@ -720,7 +627,7 @@ const easeOutCubic=t=>1-Math.pow(1-t,3);
 const easeOutBack=t=>{ const c1=1.70158; const c3=c1+1; return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2); }
 
 // ════════════════════════════════════════════════════════════
-// PANEL NAVIGÁCIÓ
+// PANEL NAVIGÁCIÓ (UX JAVÍTVA)
 // ════════════════════════════════════════════════════════════
 function buildFloorNav(){
     const nav=document.getElementById('floor-nav');
@@ -740,7 +647,13 @@ function selectFloor(idx){
     selectedFloor=idx;
     updateFloorHighlight();
     fillPanel(idx);
-    if(!panelOpen){ panelOpen=true; document.getElementById('proj-panel').classList.add('open'); document.getElementById('tap-hint').classList.remove('show'); }
+    
+    if(!panelOpen){ 
+        panelOpen=true; 
+        document.getElementById('proj-panel').classList.add('open'); 
+        document.getElementById('tap-hint').classList.remove('show'); 
+        document.getElementById('modal-backdrop').classList.add('open'); // Háttér bekapcsolása kattintás elfogáshoz
+    }
 }
 
 function navFloor(dir){
@@ -752,6 +665,7 @@ function closePanel(){
     panelOpen=false;
     selectedFloor=-1;
     document.getElementById('proj-panel').classList.remove('open');
+    document.getElementById('modal-backdrop').classList.remove('open'); // Háttér kikapcsolása
     document.querySelectorAll('.fn-card').forEach(c=>c.classList.remove('active'));
     setTimeout(()=>{ if(buildPhase==='done') document.getElementById('tap-hint').classList.add('show'); },600);
 }
@@ -767,12 +681,12 @@ function updateFloorHighlight(){
 function fillPanel(idx){
     const d=FLOORS[idx];
     setVar('--p',d.col);
-    setVar('--pg',d.col+'66');
-    setVar('--pb',hexToRgba(d.col,0.1));
+    setVar('--pg',d.col+'77');
+    setVar('--pb',hexToRgba(d.col,0.15));
 
     document.getElementById('pp-badge').textContent=`0${d.n}`;
     document.getElementById('pp-name').textContent=d.name;
-    document.getElementById('pp-name').style.textShadow=`0 0 25px ${d.col}88`;
+    document.getElementById('pp-name').style.textShadow=`0 0 30px ${d.col}99`;
     document.getElementById('pp-sub').textContent=d.sub;
     document.getElementById('pp-sub').style.color=d.col;
     document.getElementById('pp-desc').textContent=d.desc;
@@ -790,57 +704,14 @@ function hexToRgba(hex,a){
     return `rgba(${r},${g},${b},${a})`;
 }
 
-// ════════════════════════════════════════════════════════════
-// ADAPTÍV SZÍN
-// ════════════════════════════════════════════════════════════
-function analyzeBackground(){
-    const video=document.getElementById('camera-bg');
-    if(!video.videoWidth||!sampleCtx) return;
-    sampleCtx.drawImage(video,0,0,64,36);
-    const data=sampleCtx.getImageData(16,8,32,20).data;
-    let r=0,g=0,b=0,n=0;
-    for(let i=0;i<data.length;i+=4){ r+=data[i]; g+=data[i+1]; b+=data[i+2]; n++; }
-    const rA=r/n/255, gA=g/n/255, bA=b/n/255;
-    const bright=0.299*rA+0.587*gA+0.114*bA;
-    const warm=rA-bA;
-    const sat=(() =>{ const mx=Math.max(rA,gA,bA),mn=Math.min(rA,gA,bA); return mx>0.01?(mx-mn)/mx:0; })();
-
-    let pH,sH,aH,mode;
-    if(bright>0.68){      pH='#0066ff'; sH='#cc00ff'; aH='#ff4400'; mode='DARK'; }
-    else if(bright<0.18){ pH='#00ffdd'; sH='#ff44ff'; aH='#ffdd00'; mode='NEON'; }
-    else if(warm>0.15){   pH='#00ddff'; sH='#0033ff'; aH='#00ffaa'; mode='COOL'; }
-    else if(warm<-0.12){  pH='#ffaa00'; sH='#ff6600'; aH='#ffee33'; mode='WARM'; }
-    else if(sat<0.12){    pH='#00cfff'; sH='#0044ff'; aH='#ff0066'; mode='CYBER'; }
-    else{
-        const h=((Math.atan2(Math.sqrt(3)*(gA-bA),2*rA-gA-bA)*180/Math.PI)+360)%360;
-        const ch=(h+180)%360;
-        pH=`hsl(${ch},100%,60%)`; sH=`hsl(${(ch+70)%360},80%,55%)`; aH=`hsl(${(ch+140)%360},100%,65%)`;
-        mode='AUTO';
-    }
-    palPT.set(pH); palST.set(sH); palAT.set(aH);
-
-    if(!panelOpen){
-        setVar('--p',pH); setVar('--s',sH); setVar('--a',aH);
-        setVar('--pg',pH+'55'); setVar('--pb',hexToRgbaFromColor(palPT,0.08));
-    }
-    const badge=document.getElementById('adapt-badge');
-    if(badge){ badge.textContent=mode; badge.style.color=pH; }
-}
-
-function hexToRgbaFromColor(c,a){ return `rgba(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)},${a})`; }
-
 function applyAdaptColors(){
     const sp=0.04;
-    lerpC(palP,palPT,sp); lerpC(palS,palST,sp); lerpC(palA,palAT,sp);
-
+    lerpC(palP,palPT,sp); 
     adaptMats.forEach(({mat,role,floorIdx})=>{
-        const tgt=role==='p'?palP:role==='s'?palS:palA;
         if(floorIdx!==undefined && floorIdx===selectedFloor) return;
-        if(mat.color) lerpC(mat.color,tgt,sp);
-        if(mat.emissive) lerpC(mat.emissive,tgt,sp*0.5);
+        if(mat.emissive) lerpC(mat.emissive, palP, sp*0.5);
     });
 }
-
 function lerpC(c,t,s){ c.r+=(t.r-c.r)*s; c.g+=(t.g-c.g)*s; c.b+=(t.b-c.b)*s; }
 
 // ════════════════════════════════════════════════════════════
@@ -851,55 +722,48 @@ function animate(){
     const t=Date.now()*.001;
     const dt = 0.016;
 
-    if(t-lastSample>0.15){ lastSample=t; analyzeBackground(); }
     applyAdaptColors();
 
     // Kamera interpoláció
     cRotX+=(tRotX-cRotX)*0.06; cRotY+=(tRotY-cRotY)*0.06;
-    zoomC+=(zoomT-zoomC)*0.1;
-    const R=6.5/zoomC;
-    camera.position.set(Math.sin(cRotY)*R, 1+cRotX*R*0.5, Math.cos(cRotY)*R);
-    camera.lookAt(0, 0.8, 0);
+    const R=8.5; // Kicsit távolabbról mutatjuk, hogy látványosabb legyen az épület
+    camera.position.set(Math.sin(cRotY)*R, 0.5+cRotX*R*0.5, Math.cos(cRotY)*R);
+    camera.lookAt(0, 1.2, 0);
 
     // Alapzat animációk
     const r1=scene.getObjectByName('r1'); if(r1) r1.rotation.z = t*0.2;
     const r2=scene.getObjectByName('r2'); if(r2) r2.rotation.z = -t*0.3;
-    const r3=scene.getObjectByName('r3'); if(r3) r3.rotation.z = t*0.1;
 
     // Antenna
-    const ag=scene.getObjectByName('antGlow'); if(ag) ag.material.opacity=0.15+Math.sin(t*3.5)*0.15;
+    const ag=scene.getObjectByName('antGlow'); if(ag) ag.material.opacity=0.2+Math.sin(t*3.5)*0.2;
     const at=scene.getObjectByName('antTip');  if(at) { at.rotation.y = t; at.rotation.x = t*0.5; }
 
-    // Emeletek és részecskék
+    // Emeletek
     floorGroups.forEach((fm,i)=>{
         if(!fm.built) return;
         const baseY=BASE_Y+(i+0.5)*FH;
         const isSel=(i===selectedFloor);
 
         if(isSel){
-            fm.glassMat.emissiveIntensity=0.4 + Math.sin(t*4)*0.1;
-            fm.exScale=THREE.MathUtils.lerp(fm.exScale, 1.15, 0.06); // Nagyobb kiemelés
-            fm.exY=THREE.MathUtils.lerp(fm.exY, 0.2, 0.06); // Erősebben szétnyílik
+            fm.glassMat.emissiveIntensity = 0.5 + Math.sin(t*5)*0.2; // Erősebb pulzálás
+            fm.exScale = THREE.MathUtils.lerp(fm.exScale, 1.15, 0.06); 
+            fm.exY = THREE.MathUtils.lerp(fm.exY, 0.25, 0.06); // Még jobban kiemelkedik
         } else {
-            fm.glassMat.emissiveIntensity=0.15 + Math.sin(t*1.5+i)*0.05;
-            fm.exScale=THREE.MathUtils.lerp(fm.exScale, 1.0, 0.08);
-            fm.exY=THREE.MathUtils.lerp(fm.exY, 0.0, 0.08);
+            fm.glassMat.emissiveIntensity = 0.02 + Math.sin(t*1.5+i)*0.02;
+            fm.exScale = THREE.MathUtils.lerp(fm.exScale, 1.0, 0.08);
+            fm.exY = THREE.MathUtils.lerp(fm.exY, 0.0, 0.08);
         }
         
         fm.group.scale.set(fm.exScale, 1, fm.exScale);
         fm.group.position.y=baseY+fm.exY;
-
-        // Részecskék keringése
-        fm.pGroup.rotation.y = -t * 0.2; // Ellentétes forgás a csavarodáshoz képest
-        fm.pGroup.children.forEach(mote => {
-            const m = mote.userData;
-            m.a += m.speed * dt;
-            mote.position.y += Math.sin(t * m.speed * 5) * 0.002;
-            if(isSel) mote.material.opacity = 1; else mote.material.opacity = 0.4;
+        
+        // Ablakfények vibrálása
+        fm.lightGroup.children.forEach((light, lIdx) => {
+            light.material.opacity = (isSel ? 1.0 : 0.6) + Math.sin(t * (2+lIdx%3) + lIdx) * 0.3;
         });
     });
 
-    if(towerGroup) towerGroup.position.y=Math.sin(t*0.5)*0.04;
+    if(towerGroup) towerGroup.position.y=Math.sin(t*0.5)*0.05;
 
     renderer.render(scene,camera);
 }
@@ -908,7 +772,7 @@ function animate(){
 // TOUCH + RAYCASTER
 // ════════════════════════════════════════════════════════════
 function onTap(x,y){
-    if(buildPhase!=='done') return;
+    if(buildPhase!=='done' || panelOpen) return; // Ha nyitva a panel, a backdrop fogja meg a klikket
     mouse.x=(x/window.innerWidth)*2-1;
     mouse.y=-(y/window.innerHeight)*2+1;
     raycaster.setFromCamera(mouse,camera);
@@ -920,33 +784,30 @@ function onTap(x,y){
     }
 }
 
-document.addEventListener('touchstart',e=>{
+// Csak a canvas-en tiltjuk le az alapértelemezett touch viselkedést
+const canvasEl = document.getElementById('ar-canvas');
+
+canvasEl.addEventListener('touchstart',e=>{
     touchMoved=false;
     if(e.touches.length===1){ touchX=e.touches[0].clientX; touchY=e.touches[0].clientY; }
-    else if(e.touches.length===2){ pinchD0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); pinchZ0=zoomT; }
 },{passive:true});
 
-document.addEventListener('touchmove',e=>{
+canvasEl.addEventListener('touchmove',e=>{
     touchMoved=true;
-    if(e.touches.length===2){
-        const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-        zoomT=Math.min(Math.max(pinchZ0*(d/pinchD0),ZMIN),ZMAX);
-    } else if(e.touches.length===1&&!gyroAvail){
+    if(e.touches.length===1&&!gyroAvail){
         tRotY+=(e.touches[0].clientX-touchX)*.005;
         tRotX+=(-e.touches[0].clientY+touchY)*.004;
         touchX=e.touches[0].clientX; touchY=e.touches[0].clientY;
     }
 },{passive:true});
 
-document.addEventListener('touchend',e=>{
+canvasEl.addEventListener('touchend',e=>{
     if(!touchMoved&&e.changedTouches.length===1){
-        if(!e.target.closest('#proj-panel')&&!e.target.closest('#pp-close-btn'))
-            onTap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+        onTap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
     }
 },{passive:true});
 
-document.addEventListener('click',e=>{
-    if(e.target.closest('#proj-panel')||e.target.closest('#start-btn')) return;
+canvasEl.addEventListener('click',e=>{
     onTap(e.clientX,e.clientY);
 });
 
