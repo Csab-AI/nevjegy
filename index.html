@@ -77,7 +77,7 @@
             position:absolute; top:18px; left:50%; transform:translateX(-50%);
             display:flex; gap:16px; align-items:center;
         }
-        .stat { font-size:9px; letter-spacing:2px; color:#ffffff44; }
+        .stat { font-size:9px; letter-spacing:2px; color:#ffffff44; transition:font-size 0.3s; }
         .stat b { color:#00ffcc; transition:color 1.2s; }
         .dot { width:5px; height:5px; border-radius:50%; background:#00ffcc; box-shadow:0 0 6px #00ffcc; animation:blink 1.5s step-start infinite; transition:background 1.2s, box-shadow 1.2s; }
         @keyframes blink { 50%{opacity:0.1} }
@@ -89,10 +89,11 @@
         }
         #adapt-mode {
             font-size:8px; letter-spacing:2px; color:#00ffcc88;
-            transition:color 1.2s;
+            transition:color 1.2s, font-size 0.3s;
         }
         #zoom-level {
             font-size:8px; letter-spacing:2px; color:#ffffff33;
+            transition:font-size 0.3s;
         }
         #zoom-hint {
             font-size:8px; letter-spacing:1px; color:#ffffff22;
@@ -110,7 +111,7 @@
             border:1px solid; padding:12px 16px; cursor:pointer; text-transform:uppercase;
             backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
             clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
-            transition:color 1.2s, border-color 1.2s, background 1.2s, filter 0.15s;
+            transition:color 1.2s, border-color 1.2s, background 1.2s, filter 0.15s, font-size 0.3s, padding 0.3s;
         }
         .action-btn:active { filter:brightness(1.8); transform:scale(0.96); }
         #btn-p { color:#ff0055; border-color:#ff005544; background:#ff005512; }
@@ -125,12 +126,12 @@
             background:rgba(0,10,20,0.88);
             padding:20px 30px; min-width:280px; max-width:88vw; text-align:center;
             clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);
-            opacity:0; transition:opacity 0.3s, transform 0.3s, background 1.2s, border-color 1.2s;
+            opacity:0; transition:opacity 0.3s, transform 0.3s, background 1.2s, border-color 1.2s, font-size 0.3s, padding 0.3s;
             pointer-events:none; border:1px solid #00ffcc33;
         }
         #info-panel.visible { opacity:1; transform:translateX(-50%) translateY(0); }
-        #info-title { font-family:'Orbitron',sans-serif; font-size:11px; color:#00ffcc; letter-spacing:4px; margin-bottom:10px; transition:color 1.2s; }
-        #info-body  { font-size:12px; color:#ffffffcc; letter-spacing:1px; line-height:2; }
+        #info-title { font-family:'Orbitron',sans-serif; font-size:11px; color:#00ffcc; letter-spacing:4px; margin-bottom:10px; transition:color 1.2s, font-size 0.3s; }
+        #info-body  { font-size:12px; color:#ffffffcc; letter-spacing:1px; line-height:2; transition:font-size 0.3s; }
 
         /* ── ERROR ── */
         #error-msg {
@@ -334,7 +335,61 @@ function applyColors() {
     if(bc){ bc.style.color=hex;  bc.style.borderColor=hex+'44';  bc.style.background=hex+'12'; }
     if(bg){ bg.style.color=shex; bg.style.borderColor=shex+'44'; bg.style.background=shex+'12'; }
     const it=document.getElementById('info-title'); if(it) it.style.color=hex;
-    const ip=document.getElementById('info-panel'); if(ip) ip.style.borderColor=hex+'33';
+    const ip=document.getElementById('info-panel');
+    if(ip){
+        ip.style.borderColor=hex+'33';
+        ip.style.background=`rgba(${Math.round(palCurrent.p.r*3)},${Math.round(palCurrent.p.g*6)},${Math.round(palCurrent.p.b*12)},0.92)`;
+    }
+}
+
+// ── UI ZOOM: HUD elemek méretezése a zoom szinthez ──
+function applyUIZoom(z) {
+    // Alap méretek × zoom faktor, de max 2x-ig (ne legyen óriási)
+    const f = Math.min(Math.max(z, 0.7), 2.0);
+
+    // Gombok
+    const btnFontSize = Math.round(10 * f);
+    const btnPad = `${Math.round(12*f)}px ${Math.round(16*f)}px`;
+    document.querySelectorAll('.action-btn').forEach(el=>{
+        el.style.fontSize = btnFontSize+'px';
+        el.style.padding  = btnPad;
+    });
+
+    // Info panel szöveg
+    const titleSize = Math.round(11 * f);
+    const bodySize  = Math.round(12 * f);
+    const infoTitle = document.getElementById('info-title');
+    const infoBody  = document.getElementById('info-body');
+    if(infoTitle) infoTitle.style.fontSize = titleSize+'px';
+    if(infoBody)  infoBody.style.fontSize  = bodySize+'px';
+
+    // Info panel padding
+    const ip = document.getElementById('info-panel');
+    if(ip) ip.style.padding = `${Math.round(20*f)}px ${Math.round(30*f)}px`;
+
+    // Státusz sor
+    const statSize = Math.round(9 * f);
+    document.querySelectorAll('.stat').forEach(el=> el.style.fontSize = statSize+'px');
+    const dotSize = Math.round(5 * f)+'px';
+    document.querySelectorAll('.dot').forEach(el=>{ el.style.width=dotSize; el.style.height=dotSize; });
+
+    // Indikátorok
+    const indSize = Math.round(8 * f);
+    const am = document.getElementById('adapt-mode');
+    const zl = document.getElementById('zoom-level');
+    if(am) am.style.fontSize = indSize+'px';
+    if(zl) zl.style.fontSize = indSize+'px';
+
+    // Sarokdíszek mérete
+    const cornerSize = Math.round(24 * f)+'px';
+    document.querySelectorAll('.corner').forEach(el=>{
+        el.style.width  = cornerSize;
+        el.style.height = cornerSize;
+    });
+
+    // Action bar pozíció - nagyobb zoom esetén feljebb tolódik
+    const ab = document.getElementById('action-bar');
+    if(ab) ab.style.bottom = Math.round(36 * Math.min(f, 1.5))+'px';
 }
 
 // ════════════════════════════════════════════════════════
@@ -550,6 +605,9 @@ function animate() {
     const zEl=document.getElementById('zoom-level');
     if(zEl) zEl.textContent='ZOOM '+zoomCurrent.toFixed(1)+'×';
 
+    // UI elemek méretezése zoom szerint (csak ha érdemi változás van)
+    applyUIZoom(zoomCurrent);
+
     // Forgás
     currentRotX+=(targetRotX-currentRotX)*0.07;
     currentRotY+=(targetRotY-currentRotY)*0.07;
@@ -656,6 +714,13 @@ function showInfo(title, body) {
     const p=document.getElementById('info-panel');
     document.getElementById('info-title').textContent='// '+title+' //';
     document.getElementById('info-body').innerHTML=body.replace(/\n/g,'<br>');
+    // Adaptív szín alkalmazása azonnal a panel megnyitásakor
+    const hex='#'+palCurrent.p.getHexString();
+    const shex='#'+palCurrent.s.getHexString();
+    p.style.borderColor=hex+'44';
+    p.style.background=`rgba(${Math.round(palCurrent.p.r*3)},${Math.round(palCurrent.p.g*6)},${Math.round(palCurrent.p.b*12)},0.92)`;
+    document.getElementById('info-title').style.color=hex;
+    document.getElementById('info-body').style.color='#ffffffdd';
     p.classList.add('visible');
     clearTimeout(infoTimer);
     infoTimer=setTimeout(()=>p.classList.remove('visible'),5000);
