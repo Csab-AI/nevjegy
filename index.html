@@ -2,20 +2,20 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=4.0, user-scalable=yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>KOVÁCS AI-GÁBOR // HYBRID AR RESEARCH TOWER</title>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>KOVÁCS AI-GÁBOR // RESEARCH TOWER</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-        body{ background:#050d1a; width:100vw; height:100vh; overflow:hidden; font-family: sans-serif; }
+        body{ background:#000; width:100vw; height:100vh; overflow:hidden; font-family: sans-serif; }
         
-        /* Kamera háttér a Fallback (iOS) módhoz */
-        #camera-bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; display:none; }
-        
-        #ar-canvas{ position:fixed; inset:0; width:100%; height:100%; z-index:1; outline:none; }
+        #camera-bg{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; transition: filter 0.5s; }
+        #ar-canvas{ position:fixed; inset:0; width:100%; height:100%; z-index:10; touch-action:none; }
+        #vignette{ position:fixed; inset:0; z-index:5; pointer-events:none; background:radial-gradient(circle at center, transparent 30%, rgba(0,2,10,0.85) 100%); }
 
-        /* ════ SPLASH (Kezdőképernyő) ════ */
+        /* ════ SPLASH ════ */
         #splash{
             position:fixed; inset:0; z-index:1000;
             background:radial-gradient(ellipse at 50% 60%, #050d1a 0%, #000 80%);
@@ -24,101 +24,101 @@
         }
         #splash.hidden{ opacity:0; pointer-events:none; transform:scale(1.05); }
         .sp-eyebrow{ font-family:'Share Tech Mono',monospace; font-size:12px; letter-spacing:10px; color:#ffffff44; }
-        .sp-name{ font-family:'Cormorant Garamond',serif; font-size:clamp(36px,9vw,64px); font-weight:400; color:#fff; text-align:center; letter-spacing:6px; line-height:1.1; text-shadow: 0 0 40px rgba(0,207,255,0.3); }
-        .sp-name em{ color:#00cfff; font-style:normal; display:block; font-size:0.35em; letter-spacing:16px; margin-top:12px; font-family:'Share Tech Mono',monospace; }
-        .sp-divider{ width:100px; height:2px; background:#00cfff; opacity:0.6; box-shadow:0 0 15px #00cfff; }
-        
+        .sp-name{
+            font-family:'Cormorant Garamond',serif; font-size:clamp(42px,10vw,72px); font-weight:400;
+            color:#fff; text-align:center; letter-spacing:8px; line-height:1.1; text-shadow: 0 0 40px rgba(0,207,255,0.3);
+        }
+        .sp-name em{ color:var(--p,#00cfff); font-style:normal; display:block; font-size:0.35em; letter-spacing:16px; margin-top:12px; font-family:'Share Tech Mono',monospace; }
+        .sp-divider{ width:100px; height:2px; background:var(--p,#00cfff); opacity:0.6; box-shadow:0 0 15px var(--p,#00cfff); }
         #start-btn{
             font-family:'Share Tech Mono',monospace; font-size:14px; letter-spacing:5px; font-weight:bold;
-            color:#000; background:#00cfff; border:none; padding:20px 54px; cursor:pointer; text-transform:uppercase;
+            color:#000; background:var(--p,#00cfff); border:none; padding:20px 54px; cursor:pointer; text-transform:uppercase;
             clip-path:polygon(16px 0%,100% 0%,calc(100% - 16px) 100%,0% 100%); transition:all 0.3s;
-            box-shadow: 0 0 25px rgba(0,207,255,0.4);
+            box-shadow: 0 0 25px var(--pg);
         }
-        #start-btn:active{ transform:scale(0.95); }
-        
+        #start-btn:active{ transform:scale(0.95); opacity:0.8; }
+
         /* ════ CSS VARS ════ */
         :root{ --p: #00cfff; --s: #0044ff; --a: #ff0066; --pg: #00cfff66; --pb: rgba(0,207,255,0.08); }
 
-        /* ════ DOM OVERLAY (WebXR UI Réteg) ════ */
-        #dom-overlay-root {
-            position: absolute; inset: 0; z-index: 100; pointer-events: none;
-        }
-
         /* ════ HUD ════ */
-        #hud{ position:absolute; inset:0; opacity:0; transition:opacity 1s ease 0.5s; pointer-events:none; }
+        #hud{ position:fixed; inset:0; z-index:20; pointer-events:none; opacity:0; transition:opacity 1s ease 0.5s; }
         #hud.visible{ opacity:1; }
 
-        .corner{ position:absolute; width:24px; height:24px; border-style:solid; border-color:var(--p); opacity: 0.5; }
-        .c-tl{ top:20px; left:20px; border-width:2px 0 0 2px; }
-        .c-tr{ top:20px; right:20px; border-width:2px 2px 0 0; }
-        .c-bl{ bottom:20px; left:20px; border-width:0 0 2px 2px; }
-        .c-br{ bottom:20px; right:20px; border-width:0 2px 2px 0; }
+        .corner{ position:absolute; width:20px; height:20px; border-style:solid; border-color:var(--p); opacity: 0.4; transition: border-color 0.5s; }
+        .c-tl{ top:15px; left:15px; border-width:2px 0 0 2px; }
+        .c-tr{ top:15px; right:15px; border-width:2px 2px 0 0; }
+        .c-bl{ bottom:15px; left:15px; border-width:0 0 2px 2px; }
+        .c-br{ bottom:15px; right:15px; border-width:0 2px 2px 0; }
 
-        /* NÉVJEGY PANEL */
+        /* ── ÚJ, KOMPAKT NÉVJEGYKÁRTYA ── */
         #namecard{ 
-            position:absolute; top:30px; left:26px; max-width:80vw; 
-            background: linear-gradient(135deg, rgba(0,4,15,0.85) 0%, rgba(0,2,8,0.7) 100%);
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            border-left: 3px solid var(--p); padding: 20px 24px; border-radius: 4px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6), inset 0 0 15px rgba(255,255,255,0.03);
-            pointer-events: auto; /* Kattintható */
+            position:absolute; top:25px; left:25px; 
+            width: 320px; max-width: calc(100vw - 50px); /* Kártya méret */
+            background: linear-gradient(135deg, rgba(0,4,15,0.65) 0%, rgba(0,2,8,0.45) 100%);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-left: 4px solid var(--p);
+            border-radius: 8px; /* Lekerekített, igazi kártya forma */
+            padding: 18px 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            pointer-events: auto; 
+            transition: border-color 0.5s;
         }
-        .nc-name{ font-family:'Cormorant Garamond',serif; font-size:clamp(18px,5vw,26px); font-weight:700; color:#fff; letter-spacing:4px; text-shadow:0 0 20px var(--pg); }
-        .nc-role{ font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--p); letter-spacing:5px; margin-top:6px; font-weight:bold; }
-        .nc-sep{ width:100%; height:1px; background:linear-gradient(90deg,var(--p),transparent); margin:12px 0; opacity:0.6; }
-        .nc-data{ font-family:'Share Tech Mono',monospace; font-size:10px; color:#ffffffcc; line-height:2; letter-spacing:1px; }
+        .nc-name{ font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:700; color:#fff; letter-spacing:2px; text-shadow:0 0 15px var(--pg); margin-bottom: 2px; }
+        .nc-role{ font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--p); letter-spacing:3px; font-weight:bold; }
+        .nc-sep{ width:100%; height:1px; background:linear-gradient(90deg,var(--p),transparent); margin:10px 0; opacity:0.4; }
+        .nc-data{ font-family:'Share Tech Mono',monospace; font-size:9px; color:#ffffffaa; line-height:1.8; letter-spacing:1px; }
+        .nc-data b{ color:#ffffff; font-weight: 600; }
 
-        .action-btns { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        .action-btns { display: flex; gap: 8px; margin-top: 14px; }
         .act-btn {
-            font-family: 'Share Tech Mono', monospace; font-size: 9px; font-weight: bold; letter-spacing: 2px;
-            padding: 12px 16px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;
-            clip-path: polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%); transition: all 0.3s;
+            font-family: 'Share Tech Mono', monospace; font-size: 9px; font-weight: bold; letter-spacing: 1px;
+            padding: 10px 14px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center;
+            border-radius: 4px; transition: all 0.2s; flex: 1; text-align: center;
         }
-        .act-btn-primary { background: var(--p); color: #000; border: none; box-shadow: 0 0 15px var(--pg); }
+        .act-btn-primary { background: var(--p); color: #000; border: none; box-shadow: 0 0 10px var(--pg); }
         .act-btn-primary:active { transform: scale(0.95); background: #fff; }
-        .act-btn-secondary { background: rgba(0,0,0,0.6); color: var(--p); border: 1px solid var(--p); }
+        .act-btn-secondary { background: rgba(0,0,0,0.5); color: var(--p); border: 1px solid var(--p); }
         .act-btn-secondary:active { transform: scale(0.95); background: var(--p); color: #000; }
 
-        #statusbox{ position:absolute; top:30px; right:26px; text-align:right; }
-        .sb-r{ font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:3px; color:#ffffff66; margin-bottom:6px; }
+        /* Státusz a jobb felső sarokban */
+        #statusbox{ position:absolute; top:25px; right:25px; text-align:right; }
+        .sb-r{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px; color:#ffffff66; margin-bottom:4px; }
         .sb-r b{ color:var(--p); opacity:0.9; }
-
-        /* AR UTASÍTÁS */
-        #tap-hint{
-            position:absolute; bottom:120px; left:50%; transform:translateX(-50%);
-            font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:4px; font-weight:bold;
-            color:#fff; background: rgba(0,207,255,0.2); border: 1px solid var(--p);
-            padding: 12px 20px; white-space:nowrap; opacity:0; transition:opacity 0.5s;
-            pointer-events:none; box-shadow: 0 0 20px rgba(0,207,255,0.2);
-            border-radius: 4px; text-align: center;
-        }
-        #tap-hint.show{ opacity:1; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; transform:translateX(-50%) scale(1.05); } }
+        #adapt-status { font-family:'Share Tech Mono',monospace; font-size:8px; color:var(--p); opacity: 0.7; letter-spacing:1px; }
 
         /* BUILD UI */
-        #build-ui{ position:absolute; bottom:130px; left:50%; transform:translateX(-50%); width:260px; text-align:center; transition:opacity 0.8s; opacity:0; pointer-events: none; }
-        #build-ui.building{ opacity: 1; }
-        #bp-label{ font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:5px; color:var(--p); margin-bottom:12px; font-weight:bold; }
+        #build-ui{ position:absolute; bottom:140px; left:50%; transform:translateX(-50%); width:240px; text-align:center; transition:opacity 0.8s, transform 0.8s; }
+        #build-ui.gone{ opacity:0; pointer-events:none; transform:translate(-50%, 15px); }
+        #bp-label{ font-family:'Share Tech Mono',monospace; font-size:10px; letter-spacing:4px; color:var(--p); margin-bottom:10px; font-weight:bold; }
         #bp-track{ height:2px; background:var(--pb); position:relative; overflow:visible; }
-        #bp-fill{ position:absolute; left:0; top:0; height:2px; background:linear-gradient(90deg,var(--s),var(--p)); box-shadow:0 0 12px var(--p); width:0%; transition:width 0.4s ease; }
-        #bp-dot{ position:absolute; top:-4px; width:10px; height:10px; background:var(--p); border-radius:50%; box-shadow:0 0 15px var(--p); right:0; }
-        #bp-text{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:3px; color:#ffffff66; margin-top:12px; }
+        #bp-fill{ position:absolute; left:0; top:0; height:2px; background:linear-gradient(90deg,var(--s),var(--p)); box-shadow:0 0 10px var(--p); width:0%; transition:width 0.4s ease; }
+        #bp-dot{ position:absolute; top:-3px; width:8px; height:8px; background:var(--p); border-radius:50%; box-shadow:0 0 12px var(--p); right:0; }
+        #bp-text{ font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px; color:#ffffff66; margin-top:10px; }
+
+        #tap-hint{
+            position:absolute; bottom:130px; left:50%; transform:translateX(-50%);
+            font-family:'Share Tech Mono',monospace; font-size:11px; letter-spacing:5px; font-weight:bold;
+            color:#ffffffaa; white-space:nowrap; opacity:0; transition:opacity 1s; pointer-events:none;
+        }
+        #tap-hint.show{ opacity:1; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
         /* ════ MODAL (Projekt Kártya) ════ */
-        #modal-backdrop { position: fixed; inset: 0; z-index: 25; display: none; background: rgba(0,0,0,0.2); pointer-events: auto; }
+        #modal-backdrop { position: fixed; inset: 0; z-index: 25; display: none; background: rgba(0,0,0,0.1); pointer-events: auto; }
         #modal-backdrop.open { display: block; }
 
         #proj-panel{
-            position:absolute; bottom:0; left:0; right:0; z-index:30;
-            pointer-events:none; transform:translateY(100%);
-            transition:transform 0.5s cubic-bezier(0.2, 1, 0.3, 1);
-            display: flex; flex-direction: column; justify-content: flex-end; max-height: 80vh; 
+            position:absolute; bottom:0; left:0; right:0; z-index:30; pointer-events:none; 
+            transform:translateY(100%); transition:transform 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+            display: flex; flex-direction: column; justify-content: flex-end; max-height: 85vh; 
         }
         #proj-panel.open{ transform:translateY(0); pointer-events:auto; }
 
         .pp-glass{
             background:linear-gradient(to top, rgba(0,4,12,0.98) 0%, rgba(2,6,18,0.92) 70%, rgba(5,10,25,0.85) 100%);
-            backdrop-filter:blur(40px); -webkit-backdrop-filter:blur(40px);
+            backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px);
             border-top:2px solid var(--pg); padding:24px 20px 30px;
             box-shadow: 0 -15px 50px rgba(0,0,0,0.8); overflow-y: auto; touch-action: pan-y; 
         }
@@ -126,11 +126,11 @@
         #floor-nav{ display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; scrollbar-width:none; padding-bottom:6px; }
         #floor-nav::-webkit-scrollbar{ display:none; }
         .fn-card{
-            flex-shrink:0; width:65px; padding:10px 8px; text-align:center;
+            flex-shrink:0; width:65px; padding:10px 6px; text-align:center;
             border:1px solid #ffffff22; cursor:pointer; background: rgba(255,255,255,0.02);
             transition:all 0.3s; clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
         }
-        .fn-card.active{ border-color:var(--p) !important; background:var(--pb) !important; transform:translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
+        .fn-card.active{ border-color:var(--p) !important; background:var(--pb) !important; transform:translateY(-4px); box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
         .fn-num{ font-family:'Orbitron',sans-serif; font-size:12px; font-weight:900; margin-bottom:5px; line-height:1; }
         .fn-dot{ width:5px; height:5px; border-radius:50%; margin:0 auto; }
         .fn-name{ font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1px; color:#ffffff88; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -180,84 +180,80 @@
             clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
         }
         #pp-close-btn-large:active { background: rgba(255,255,255,0.15); border-color: #fff; }
-
     </style>
 </head>
 <body>
 
-<!-- Kamera Háttér (Csak iOS/Fallback módban aktív) -->
 <video id="camera-bg" autoplay muted playsinline></video>
-
-<!-- 3D Canvas -->
+<div id="vignette"></div>
 <canvas id="ar-canvas"></canvas>
 
-<!-- A teljes interaktív UI réteg (DOM Overlay) -->
-<div id="dom-overlay-root">
+<!-- HUD -->
+<div id="hud">
+    <div class="corner c-tl"></div><div class="corner c-tr"></div>
+    <div class="corner c-bl"></div><div class="corner c-br"></div>
 
-    <div id="hud">
-        <div class="corner c-tl"></div><div class="corner c-tr"></div>
-        <div class="corner c-bl"></div><div class="corner c-br"></div>
-
-        <div id="namecard">
-            <div class="nc-name">KOVÁCS AI-GÁBOR</div>
-            <div class="nc-role">LEAD AI ENGINEER  ·  NEURAL ARCHITECT</div>
-            <div class="nc-sep"></div>
-            <div class="nc-data">
-                <b>ai@kovacs.dev</b><br>
-                +36 XX XXX XXXX<br>
-                github.com/kovacs-ai
-            </div>
-            <div class="action-btns">
-                <button id="btn-contact" class="act-btn act-btn-primary" onclick="saveContact()">👤 NÉVJEGY MENTÉSE</button>
-                <a href="https://calendly.com/" target="_blank" class="act-btn act-btn-secondary">📅 IDŐPONT</a>
-            </div>
+    <!-- KOMPAKT KÁRTYA -->
+    <div id="namecard">
+        <div class="nc-name">KOVÁCS AI-GÁBOR</div>
+        <div class="nc-role">LEAD AI ENGINEER  ·  NEURAL ARCHITECT</div>
+        <div class="nc-sep"></div>
+        <div class="nc-data">
+            <b>ai@kovacs.dev</b><br>
+            +36 XX XXX XXXX<br>
+            github.com/kovacs-ai
         </div>
-
-        <div id="statusbox">
-            <div class="sb-r" id="ar-mode-badge">AR <b>AKTÍV</b></div>
-            <div class="sb-r" id="sb-clock">--:--</div>
-        </div>
-
-        <div id="tap-hint" class="show">// KERESS EGY SÍK FELÜLETET A KAMERÁVAL //</div>
-
-        <div id="build-ui">
-            <div id="bp-label">RESEARCH TOWER ÉPÜL</div>
-            <div id="bp-track"><div id="bp-fill"></div><div id="bp-dot"></div></div>
-            <div id="bp-text">INICIALIZÁLÁS...</div>
+        <div class="action-btns">
+            <button id="btn-contact" class="act-btn act-btn-primary" onclick="saveContact()">NÉVJEGY MENTÉSE</button>
+            <a href="https://calendly.com/" target="_blank" class="act-btn act-btn-secondary">IDŐPONT</a>
         </div>
     </div>
 
-    <div id="modal-backdrop" onclick="closePanel()"></div>
+    <div id="statusbox">
+        <div class="sb-r">AR <b>AKTÍV</b></div>
+        <div class="sb-r" id="sb-clock">--:--</div>
+        <div id="adapt-status">KÖRNYEZET_SZINKRON</div>
+    </div>
 
-    <div id="proj-panel">
-        <div class="pp-glass">
-            <div id="floor-nav"></div>
-            <div class="pp-header">
-                <div id="pp-badge">01</div>
-                <div class="pp-titles">
-                    <div id="pp-name">–</div>
-                    <div id="pp-sub">–</div>
-                </div>
-                <div class="pp-nav">
-                    <button class="pp-nav-btn" onclick="navFloor(-1)">‹</button>
-                    <button class="pp-nav-btn" onclick="navFloor(+1)">›</button>
-                </div>
+    <div id="build-ui">
+        <div id="bp-label">RESEARCH TOWER ÉPÜL</div>
+        <div id="bp-track"><div id="bp-fill"></div><div id="bp-dot"></div></div>
+        <div id="bp-text">INICIALIZÁLÁS...</div>
+    </div>
+    <div id="tap-hint">// KOPPINTS EGY EMELETRE //</div>
+</div>
+
+<div id="modal-backdrop" onclick="closePanel()"></div>
+
+<!-- Projekt panel -->
+<div id="proj-panel">
+    <div class="pp-glass">
+        <div id="floor-nav"></div>
+        <div class="pp-header">
+            <div id="pp-badge">01</div>
+            <div class="pp-titles">
+                <div id="pp-name">–</div>
+                <div id="pp-sub">–</div>
             </div>
-            <div id="pp-desc">–</div>
-            <div class="pp-tech" id="pp-tech"></div>
-            <div class="pp-stats">
-                <div class="sbox"><div class="sv" id="sv1">–</div><div class="sl" id="sl1">–</div></div>
-                <div class="sbox"><div class="sv" id="sv2">–</div><div class="sl" id="sl2">–</div></div>
-                <div class="sbox"><div class="sv" id="sv3">–</div><div class="sl" id="sl3">–</div></div>
+            <div class="pp-nav">
+                <button class="pp-nav-btn" onclick="navFloor(-1)">‹</button>
+                <button class="pp-nav-btn" onclick="navFloor(+1)">›</button>
             </div>
-            <button id="pp-close-btn-large" onclick="closePanel()">✕ VISSZA A TORONYHOZ</button>
         </div>
+        <div id="pp-desc">–</div>
+        <div class="pp-tech" id="pp-tech"></div>
+        <div class="pp-stats">
+            <div class="sbox"><div class="sv" id="sv1">–</div><div class="sl" id="sl1">–</div></div>
+            <div class="sbox"><div class="sv" id="sv2">–</div><div class="sl" id="sl2">–</div></div>
+            <div class="sbox"><div class="sv" id="sv3">–</div><div class="sl" id="sl3">–</div></div>
+        </div>
+        <button id="pp-close-btn-large" onclick="closePanel()">✕ VISSZA A TORONYHOZ</button>
     </div>
 </div>
 
-<!-- Splash / Kezdőképernyő -->
+<!-- Splash -->
 <div id="splash">
-    <div class="sp-eyebrow">H Y B R I D   A R   P O R T F Ó L I Ó</div>
+    <div class="sp-eyebrow">A R   P O R T F Ó L I Ó</div>
     <div class="sp-name">RESEARCH<br>TOWER<em>KOVÁCS AI-GÁBOR</em></div>
     <div class="sp-divider"></div>
     <button id="start-btn" onclick="startAR()">ÉLMÉNY INDÍTÁSA</button>
@@ -269,43 +265,69 @@
 // PROJEKT ADATOK
 // ════════════════════════════════════════════════════════════
 const FLOORS = [
-    { n:1, name:'DIAG-NET', sub:'Diagnosztikai AI rendszer', desc:'CT és röntgen képek mélytanuló alapú elemzése...', tech:['Python','PyTorch','MONAI','Docker'], stats:[['94.3%','PONTOSSÁG'],['2k+','KÉP/NAP'],['8ms','VÁLASZIDŐ']], col:'#ff3344', hex:0xff3344 },
-    { n:2, name:'GENO-SCAN', sub:'Genomikai variáns elemző', desc:'Ritka genetikai betegségek azonosítása NGS adatokból...', tech:['Python','TensorFlow','BioPython','AWS'], stats:[['50k+','VARIÁNS'],['99.1%','SPEC.'],['3 KH','TANÍTÁS']], col:'#22ff77', hex:0x22ff77 },
-    { n:3, name:'NEURO-VISION', sub:'MRI agyszövet szegmentáló', desc:'3D agyszövet szegmentálás stroke és agytumor detektáláshoz...', tech:['PyTorch','3D U-Net','CUDA','ITK'], stats:[['0.8mm','FELBONTÁS'],['96.7%','DICE'],['45s','SCAN/MRI']], col:'#bb66ff', hex:0xbb66ff },
-    { n:4, name:'PHARMA-PRED', sub:'Gyógyszerhatás előrejelző', desc:'Mellékhatás és gyógyszerkölcsönhatás predikció LLM-mel...', tech:['LangChain','GPT-4','RDKit','FastAPI'], stats:[['10k+','VEGYÜLET'],['87%','PREDIKCIÓ'],['2024','LAUNCH']], col:'#ffaa00', hex:0xffaa00 },
-    { n:5, name:'CLINIC-BOT', sub:'Orvosi LLM asszisztens', desc:'Klinikai dokumentáció automatizálás finomhangolt LLaMA modellel...', tech:['LLaMA','RAG','ChromaDB','Docker'], stats:[['50k','PUBLIKÁCIÓ'],['92%','ELÉGEDETTSÉG'],['On-prem','DEPLOY']], col:'#00ccff', hex:0x00ccff },
-    { n:6, name:'VITAL-FLOW', sub:'ICU valós idejű monitoring', desc:'Valós idejű beteg állapot predikció intenzív osztályon...', tech:['Kafka','Spark','scikit-learn','Grafana'], stats:[['6 óra','ELŐREJELZÉS'],['15+','PARAMÉTER'],['3','KÓRHÁZ']], col:'#ff5588', hex:0xff5588 },
+    { n:1, name:'DIAG-NET',     sub:'Diagnosztikai AI rendszer',
+      desc:'CT és röntgen képek mélytanuló alapú elemzése. 94.3%-os pontossággal azonosítja tüdőelváltozásokat, töréseket és daganatos gócokat. Napi 2000+ képet dolgoz fel valós időben.',
+      tech:['Python','PyTorch','MONAI','DICOM','FastAPI','Docker'],
+      stats:[['94.3%','PONTOSSÁG'],['2000+','KÉP/NAP'],['8ms','VÁLASZIDŐ']],
+      col:'#ff3344', hex:0xff3344 },
+    { n:2, name:'GENO-SCAN',    sub:'Genomikai variáns elemző',
+      desc:'Ritka genetikai betegségek azonosítása NGS adatokból. 50 000+ variáns katalogizálása és korreláció ismert patogén mutációkkal. Klinikai döntéstámogató rendszer.',
+      tech:['Python','TensorFlow','BioPython','AWS','Pandas','R'],
+      stats:[['50k+','VARIÁNS'],['99.1%','SPEC.'],['3 KH','TANÍTÁS']],
+      col:'#22ff77', hex:0x22ff77 },
+    { n:3, name:'NEURO-VISION', sub:'MRI agyszövet szegmentáló',
+      desc:'3D agyszövet szegmentálás stroke és agytumor detektáláshoz. 3D U-Net architektúra submilliméteres pontossággal különíti el az agyszöveteket. FDA-minősítés folyamatban.',
+      tech:['PyTorch','3D U-Net','CUDA','ITK','NiBabel','SimpleITK'],
+      stats:[['0.8mm','FELBONTÁS'],['96.7%','DICE'],['45s','SCAN/MRI']],
+      col:'#bb66ff', hex:0xbb66ff },
+    { n:4, name:'PHARMA-PRED',  sub:'Gyógyszerhatás előrejelző',
+      desc:'Mellékhatás és gyógyszerkölcsönhatás predikció LLM-mel. Molekuláris struktúra alapú farmakokinetika és toxicitás becslés. 10 000+ vegyület adatbázis.',
+      tech:['LangChain','GPT-4','RDKit','FastAPI','PostgreSQL','React'],
+      stats:[['10k+','VEGYÜLET'],['87%','PREDIKCIÓ'],['2024','LAUNCH']],
+      col:'#ffaa00', hex:0xffaa00 },
+    { n:5, name:'CLINIC-BOT',   sub:'Orvosi LLM asszisztens',
+      desc:'Klinikai dokumentáció automatizálás finomhangolt LLaMA modellel. RAG architektúra 50 000+ orvosi publikáció tudásbázisával. GDPR-kompatibilis, on-premise telepítés.',
+      tech:['LLaMA','RAG','ChromaDB','Docker','Kubernetes','FastAPI'],
+      stats:[['50k','PUBLIKÁCIÓ'],['92%','ELÉGEDETTSÉG'],['On-prem','DEPLOY']],
+      col:'#00ccff', hex:0x00ccff },
+    { n:6, name:'VITAL-FLOW',   sub:'ICU valós idejű monitoring',
+      desc:'Valós idejű beteg állapot predikció intenzív osztályon. 15+ vitális paraméter streaming elemzése, 6 órás előrejelzési ablak kritikus állapotromlásra. 3 kórházban bevezetve.',
+      tech:['Kafka','Spark','scikit-learn','Grafana','TimescaleDB','Go'],
+      stats:[['6 óra','ELŐREJELZÉS'],['15+','PARAMÉTER'],['3','KÓRHÁZ']],
+      col:'#ff5588', hex:0xff5588 },
 ];
 
 // ════════════════════════════════════════════════════════════
-// ÁLLAPOT VÁLTOZÓK (Hibrid AR Rendszer)
+// ÁLLAPOT ÉS VÁLTOZÓK
 // ════════════════════════════════════════════════════════════
 let scene, camera, renderer, raycaster, mouse;
-let isWebXRMode = false;
+let towerGroup, floorGroups=[];
+let buildPhase='idle';
+let selectedFloor=-1, panelOpen=false;
+let pulseAnim = 0; 
 
-// WebXR specifikus
-let controller, reticle, hitTestSource = null, hitTestSourceRequested = false;
-
-// Fallback (Magic Window) specifikus
+// Kamera & Giroszkóp
 let gyroAvail=false, tRotX=0, tRotY=0, cRotX=0, cRotY=0;
 let touchX=0, touchY=0, touchMoved=false;
 
-let worldGroup; 
-let towerGroup, floorGroups=[];
-let buildPhase = 'scanning'; 
-let selectedFloor = -1, panelOpen = false;
-let pulseAnim = 0; 
+// Világítás
+let keyLight, fillLight;
 
-// Épület belső dimenziók
-const FH=0.65, FW=1.4, BASE_Y=0.0; 
-const AR_SCALE = 0.15; 
-const BUILD_S=12; 
+// Adaptív Analitika
+let sampleCanvas, sampleCtx, lastSample=0;
+let envBright = 0.5, targetBright = 0.5; 
+let currentEnvColor = new THREE.Color(0x00cfff); 
+let targetEnvColor = new THREE.Color(0x00cfff);
+
+// ── EREDETI MASSZÍV ÉPÜLET DIMENZIÓK ──
+const FH=0.65, FW=1.4, BASE_Y=-1.8;
+const BUILD_S=16; 
 
 // ════════════════════════════════════════════════════════════
 // NÉVJEGY LETÖLTÉS (vCard)
 // ════════════════════════════════════════════════════════════
 function saveContact() {
-    const vcardData = `BEGIN:VCARD\nVERSION:3.0\nFN:Kovács AI-Gábor\nORG:Neural Architect\nTITLE:Lead AI Engineer\nTEL;TYPE=WORK,VOICE:+36123456789\nEMAIL:ai@kovacs.dev\nURL:https://github.com/kovacs-ai\nNOTE:Hibrid AR Portfólióból mentve\nEND:VCARD`;
+    const vcardData = `BEGIN:VCARD\nVERSION:3.0\nFN:Kovács AI-Gábor\nORG:Neural Architect\nTITLE:Lead AI Engineer\nTEL;TYPE=WORK,VOICE:+36123456789\nEMAIL:ai@kovacs.dev\nURL:https://github.com/kovacs-ai\nNOTE:AR Portfólióból mentve\nEND:VCARD`;
     const blob = new Blob([vcardData], { type: 'text/vcard' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -318,247 +340,145 @@ function saveContact() {
     btn.innerHTML = "✓ MENTVE"; btn.style.background = "#fff"; btn.style.color = "#000";
     setTimeout(() => { btn.innerHTML = orig; btn.style.background = ""; btn.style.color = ""; }, 2500);
 
-    pulseAnim = 1.0; 
+    pulseAnim = 1.0; // Adat-burst animáció indítása
 }
 
 // ════════════════════════════════════════════════════════════
-// HIBRID AR INDÍTÁSA (A "Varázslat" itt történik)
+// INDÍTÁS
 // ════════════════════════════════════════════════════════════
-async function startAR() {
-    let xrSupported = false;
-    
-    // Ellenőrizzük, hogy a böngésző natívan támogatja-e a padló-felismerős AR-t (Pl. Android Chrome)
-    if ('xr' in navigator) {
-        xrSupported = await navigator.xr.isSessionSupported('immersive-ar');
-    }
-
-    if (xrSupported) {
-        // --- 1. ÚT: IGAZI WEBXR (Hit Test, 6DOF) ---
-        isWebXRMode = true;
-        document.getElementById('ar-mode-badge').innerHTML = "WebXR <b>AKTÍV</b>";
-        try {
-            const session = await navigator.xr.requestSession('immersive-ar', {
-                requiredFeatures: ['hit-test', 'dom-overlay'],
-                domOverlay: { root: document.getElementById('dom-overlay-root') }
-            });
-            initThreeBase();
-            initWebXRSpecifics(session);
-        } catch (err) {
-            // Ha a felhasználó mégis elutasítja a WebXR engedélyt, visszaesünk a Fallback-re
-            startFallbackAR();
-        }
-    } else {
-        // --- 2. ÚT: FALLBACK MÓD (iOS Safari / Magic Window) ---
-        isWebXRMode = false;
-        document.getElementById('ar-mode-badge').innerHTML = "Kamera AR <b>AKTÍV</b>";
-        startFallbackAR();
-    }
-}
-
-async function startFallbackAR() {
-    try {
-        // Kamera videó stream bekérése kézzel
-        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+async function startAR(){
+    try{
+        const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
         const videoEl = document.getElementById('camera-bg');
         videoEl.srcObject = stream;
-        videoEl.style.display = 'block'; // Megjelenítjük a videót a canvas alatt
+        videoEl.style.display = 'block';
 
-        initThreeBase();
-        initFallbackSpecifics();
+        sampleCanvas=document.createElement('canvas');
+        sampleCanvas.width=64; sampleCanvas.height=36;
+        sampleCtx=sampleCanvas.getContext('2d',{willReadFrequently:true});
 
-    } catch (err) {
-        alert("Kérlek engedélyezd a kamerát a böngésző beállításaiban az AR élményhez!");
+        initThree();
+        buildFloorNav();
+        startBuild();
+        
+        document.getElementById('splash').classList.add('hidden');
+        setTimeout(()=>document.getElementById('splash').style.display='none', 1000);
+        document.getElementById('hud').classList.add('visible');
+        setInterval(()=>{ const e=document.getElementById('sb-clock'); if(e) e.textContent=new Date().toTimeString().slice(0,5); },1000);
+
+        animate();
+    }catch(err){
+        alert("Kamera hiba: Kérlek engedélyezd a kamerát a böngésző beállításaiban!");
     }
 }
 
 // ════════════════════════════════════════════════════════════
-// THREE.JS ALAPOK (Közös mindkét módnál)
+// KÖRNYEZET-ANALIZÁLÓ 
 // ════════════════════════════════════════════════════════════
-function initThreeBase() {
-    const canvas = document.getElementById('ar-canvas');
-    renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
+function analyzeBackground(){
+    const video=document.getElementById('camera-bg');
+    if(video.readyState !== video.HAVE_ENOUGH_DATA || !sampleCtx) return;
     
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+    sampleCtx.drawImage(video,0,0,64,36);
+    const data=sampleCtx.getImageData(0,0,64,36).data;
+    
+    let r=0,g=0,b=0, count=0;
+    for(let i=0;i<data.length;i+=16){ 
+        r+=data[i]; g+=data[i+1]; b+=data[i+2]; count++; 
+    }
+    r/=count; g/=count; b/=count;
+    
+    targetBright = (0.299*r + 0.587*g + 0.114*b) / 255;
+    
+    const hsl = {};
+    new THREE.Color(r/255, g/255, b/255).getHSL(hsl);
+    
+    if (hsl.s > 0.05 && targetBright > 0.05) {
+        targetEnvColor.setHSL(hsl.h, Math.min(hsl.s * 2.0, 0.9), 0.5); 
+    } else {
+        targetEnvColor.setHex(0x00cfff); 
+    }
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    const dirLight = new THREE.DirectionalLight(0xffddaa, 1.2);
-    dirLight.position.set(1, 4, 2);
-    scene.add(dirLight);
+    const as = document.getElementById('adapt-status');
+    if(as) {
+        if(targetBright < 0.45) as.textContent = "ÉJSZAKAI VILÁGÍTÁS_ON";
+        else if (targetBright > 0.7) as.textContent = "NAPPALI_MÓD";
+        else as.textContent = "KÖRNYEZET_SZINKRON";
+    }
+}
 
-    worldGroup = new THREE.Group();
-    worldGroup.scale.set(AR_SCALE, AR_SCALE, AR_SCALE); 
-    scene.add(worldGroup);
+// ════════════════════════════════════════════════════════════
+// THREE INIT - NAGY TORONY, ÁRNYÉKOK
+// ════════════════════════════════════════════════════════════
+function initThree(){
+    const canvas=document.getElementById('ar-canvas');
+    const W=window.innerWidth, H=window.innerHeight;
+    
+    renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+    renderer.setSize(W,H); 
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setClearColor(0x000000, 0); 
+    
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    scene=new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x000511, 0.035);
 
-    towerGroup = new THREE.Group();
-    worldGroup.add(towerGroup);
+    camera=new THREE.PerspectiveCamera(52,W/H,0.1,200);
+    camera.position.set(0, 0.5, 7.5);
+    camera.lookAt(0, 1.2, 0);
+    
+    raycaster=new THREE.Raycaster(); mouse=new THREE.Vector2();
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+    
+    keyLight = new THREE.DirectionalLight(0xffddaa, 1.5); 
+    keyLight.position.set(-4, 10, 6); 
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 1024;
+    keyLight.shadow.mapSize.height = 1024;
+    keyLight.shadow.bias = -0.001;
+    scene.add(keyLight);
+    
+    const rimLight = new THREE.DirectionalLight(0x00cfff, 1.8); 
+    rimLight.position.set(5, 3, -6); 
+    scene.add(rimLight);
+
+    fillLight = new THREE.PointLight(0x00cfff, 1.2, 15);
+    fillLight.position.set(0, BASE_Y + 1, 4);
+    scene.add(fillLight);
+
+    towerGroup=new THREE.Group(); 
+    scene.add(towerGroup);
 
     buildGround();
-    buildCinematicFloors();
+    buildCinematicFloors(); 
+    setupGyro();
 
-    buildFloorNav();
-    document.getElementById('splash').classList.add('hidden');
-    setTimeout(()=>document.getElementById('splash').style.display='none', 1000);
-    document.getElementById('hud').classList.add('visible');
-    setInterval(()=>{ const e=document.getElementById('sb-clock'); if(e) e.textContent=new Date().toTimeString().slice(0,5); },1000);
-
-    window.addEventListener('resize', onWindowResize, false);
-}
-
-// ════════════════════════════════════════════════════════════
-// WEBXR SPECIFIKUS INIT
-// ════════════════════════════════════════════════════════════
-function initWebXRSpecifics(session) {
-    renderer.xr.enabled = true;
-    worldGroup.visible = false; // Elrejtjük, amíg le nem rakják
-
-    const reticleGeo = new THREE.RingGeometry(0.1, 0.12, 32).rotateX(-Math.PI / 2);
-    const reticleMat = new THREE.MeshBasicMaterial({ color: 0x00cfff, transparent:true, opacity: 0.8 });
-    reticle = new THREE.Mesh(reticleGeo, reticleMat);
-    reticle.matrixAutoUpdate = false;
-    reticle.visible = false;
-    scene.add(reticle);
-
-    controller = renderer.xr.getController(0);
-    controller.addEventListener('select', onSelectWebXR);
-    scene.add(controller);
-
-    renderer.xr.setReferenceSpaceType('local');
-    renderer.xr.setSession(session);
-    renderer.setAnimationLoop(renderLoop);
-}
-
-// ════════════════════════════════════════════════════════════
-// FALLBACK SPECIFIKUS INIT (iOS)
-// ════════════════════════════════════════════════════════════
-function initFallbackSpecifics() {
-    raycaster = new THREE.Raycaster(); 
-    mouse = new THREE.Vector2();
-
-    // A tornyot fixen a kamera elé tesszük, kicsit lejjebb
-    worldGroup.position.set(0, -0.6, -2.5);
-    worldGroup.scale.set(AR_SCALE * 1.5, AR_SCALE * 1.5, AR_SCALE * 1.5); 
-    worldGroup.visible = true;
-
-    // Giroszkóp beállítása
-    setupGyroFallback();
-
-    // UI Szöveg cseréje, mivel itt nincs letétel
-    document.getElementById('tap-hint').classList.remove('show');
-    
-    // Rögtön indulhat az építés
-    startBuild();
-
-    // Érintés események a Fallback Raycastinghez
-    const domOverlay = document.getElementById('dom-overlay-root');
-    domOverlay.addEventListener('touchstart', e => { touchMoved=false; if(e.touches.length===1){ touchX=e.touches[0].clientX; touchY=e.touches[0].clientY; } },{passive:true});
-    domOverlay.addEventListener('touchmove', e => { 
-        touchMoved=true; 
-        if(e.touches.length===1 && !gyroAvail){
-            tRotY += (e.touches[0].clientX - touchX) * 0.005;
-            tRotX += (-e.touches[0].clientY + touchY) * 0.004;
-            touchX = e.touches[0].clientX; touchY = e.touches[0].clientY;
-        }
-    },{passive:true});
-    domOverlay.addEventListener('touchend', e => {
-        if(!touchMoved && e.changedTouches.length===1){
-            onSelectFallback(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-        }
-    },{passive:true});
-    domOverlay.addEventListener('click', e => {
-        // Ne fusson le, ha gombra kattintottunk
-        if(e.target.closest('.act-btn') || e.target.closest('#pp-close-btn-large')) return;
-        onSelectFallback(e.clientX, e.clientY);
+    window.addEventListener('resize',()=>{
+        const W=window.innerWidth,H=window.innerHeight;
+        camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H);
     });
-
-    renderer.setAnimationLoop(renderLoop);
 }
 
-function setupGyroFallback(){
-    if(typeof DeviceOrientationEvent==='undefined') return;
-    const en=()=>{
-        window.addEventListener('deviceorientation',e=>{
-            if(e.beta===null) return; gyroAvail=true;
-            tRotX = THREE.MathUtils.clamp((e.beta-72)*.012, -.8, .8);
-            tRotY = THREE.MathUtils.clamp(e.gamma*.02, -Math.PI, Math.PI);
-        });
-    };
-    if(typeof DeviceOrientationEvent.requestPermission==='function')
-        DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') en(); }).catch(()=>{});
-    else en();
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-// ════════════════════════════════════════════════════════════
-// INTERAKCIÓ: WEBXR
-// ════════════════════════════════════════════════════════════
-function onSelectWebXR() {
-    if (panelOpen) return; 
-    if (buildPhase === 'scanning') {
-        if (reticle.visible) {
-            worldGroup.position.setFromMatrixPosition(reticle.matrix);
-            worldGroup.visible = true;
-            reticle.visible = false;
-            document.getElementById('tap-hint').classList.remove('show');
-            startBuild(); 
-        }
-    } 
-    else if (buildPhase === 'done') {
-        const tempMatrix = new THREE.Matrix4();
-        tempMatrix.identity().extractRotation(controller.matrixWorld);
-        const raycaster = new THREE.Raycaster();
-        raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-        raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-
-        const meshes = floorGroups.filter(f => f.built).map(f => f.glass);
-        const hits = raycaster.intersectObjects(meshes, false);
-        if (hits.length > 0) {
-            const fi = hits[0].object.userData.fi;
-            if (fi !== undefined) selectFloor(fi);
-        }
-    }
-}
-
-// ════════════════════════════════════════════════════════════
-// INTERAKCIÓ: FALLBACK MÓD
-// ════════════════════════════════════════════════════════════
-function onSelectFallback(x, y) {
-    if (panelOpen || buildPhase !== 'done') return; 
-    mouse.x = (x / window.innerWidth) * 2 - 1;
-    mouse.y = -(y / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-
-    const meshes = floorGroups.filter(f => f.built).map(f => f.glass);
-    const hits = raycaster.intersectObjects(meshes, false);
-    if (hits.length > 0) {
-        const fi = hits[0].object.userData.fi;
-        if (fi !== undefined) selectFloor(fi);
-    }
-}
-
-
-// ════════════════════════════════════════════════════════════
-// ÉPÜLET GENERÁLÁS (Közös)
-// ════════════════════════════════════════════════════════════
 function buildGround(){
-    const baseGeo = new THREE.CylinderGeometry(3, 3, 0.05, 32);
+    const gGroup = new THREE.Group();
+    gGroup.position.y = BASE_Y;
+    scene.add(gGroup);
+
+    const baseGeo = new THREE.CylinderGeometry(4, 4, 0.1, 32);
     const baseMat = new THREE.MeshStandardMaterial({color: 0x111111, roughness: 0.9, metalness: 0.2});
     const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-    baseMesh.position.y = BASE_Y - 0.025; 
-    worldGroup.add(baseMesh);
+    baseMesh.position.y = -0.05;
+    baseMesh.receiveShadow = true;
+    gGroup.add(baseMesh);
 
     const r1 = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.015, 16, 100), new THREE.MeshBasicMaterial({color:0x00cfff, transparent:true, opacity:0.8}));
-    r1.rotation.x = Math.PI/2; r1.position.y = BASE_Y + 0.01; r1.name='r1'; worldGroup.add(r1);
+    r1.rotation.x = Math.PI/2; r1.position.y = 0.02; r1.name='r1'; gGroup.add(r1);
     
     const r2 = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.005, 16, 100), new THREE.MeshBasicMaterial({color:0x0044ff, transparent:true, opacity:0.4}));
-    r2.rotation.x = Math.PI/2; r2.position.y = BASE_Y + 0.01; r2.name='r2'; worldGroup.add(r2);
+    r2.rotation.x = Math.PI/2; r2.position.y = 0.02; r2.name='r2'; gGroup.add(r2);
 }
 
 function buildCinematicFloors(){
@@ -573,26 +493,29 @@ function buildCinematicFloors(){
         const group=new THREE.Group();
         const radius = FW * Math.pow(0.92, i);
         
-        group.position.set(0, BASE_Y + gap + (i + 0.5) * FH, 0);
+        group.position.set(0, BASE_Y + (i + 0.5) * FH, 0);
         group.scale.set(1,0.001,1); 
 
         const slabGeo = new THREE.CylinderGeometry(radius, radius, 0.08, 16);
         const slab = new THREE.Mesh(slabGeo, slabMat);
         slab.position.y = -actualFH/2 + 0.04;
+        slab.castShadow = true; slab.receiveShadow = true;
         group.add(slab);
 
         const glassRadius = radius * 0.88;
         const glassGeo = new THREE.CylinderGeometry(glassRadius, glassRadius, actualFH - 0.08, 16);
         const glassMat = new THREE.MeshPhysicalMaterial({
-            color: 0x02050a, emissive: new THREE.Color(data.hex), emissiveIntensity: 0.8, 
-            metalness: 0.9, roughness: 0.05, clearcoat: 1.0, transparent: true, opacity: 0.9
+            color: 0x02050a, emissive: new THREE.Color(data.hex), emissiveIntensity: 0.02, 
+            metalness: 0.9, roughness: 0.05, clearcoat: 1.0, transparent: true, opacity: 0.85
         });
         const glass=new THREE.Mesh(glassGeo, glassMat);
+        glass.castShadow = true; glass.receiveShadow = true;
         group.add(glass);
         glass.userData={fi:i}; 
 
         const coreGeo = new THREE.CylinderGeometry(radius*0.35, radius*0.35, actualFH, 8);
         const core = new THREE.Mesh(coreGeo, coreMat);
+        core.castShadow = true; core.receiveShadow = true;
         group.add(core);
 
         for(let w=1; w<=3; w++){
@@ -600,6 +523,7 @@ function buildCinematicFloors(){
             const hFrame = new THREE.Mesh(hFrameGeo, pillarMat);
             hFrame.rotation.x = Math.PI/2;
             hFrame.position.y = -actualFH/2 + (actualFH/4)*w;
+            hFrame.castShadow = true; hFrame.receiveShadow = true;
             group.add(hFrame);
         }
 
@@ -609,6 +533,7 @@ function buildCinematicFloors(){
             const pGeo = new THREE.CylinderGeometry(0.025, 0.025, actualFH, 8);
             const pillar = new THREE.Mesh(pGeo, pillarMat);
             pillar.position.set(Math.cos(ang)*radius*0.96, 0, Math.sin(ang)*radius*0.96);
+            pillar.castShadow = true; pillar.receiveShadow = true;
             group.add(pillar);
         }
 
@@ -621,7 +546,7 @@ function buildCinematicFloors(){
         const lightGroup = new THREE.Group();
         for(let l=0; l<18; l++){
             const lGeo = new THREE.BoxGeometry(0.04, 0.02, 0.02);
-            const lMat = new THREE.MeshBasicMaterial({color: 0xffffff, transparent:true, opacity: 0});
+            const lMat = new THREE.MeshBasicMaterial({color: 0xffeebb, transparent:true, opacity: 0});
             const light = new THREE.Mesh(lGeo, lMat);
             const a = Math.random() * Math.PI * 2;
             light.position.set(Math.cos(a)*glassRadius, (Math.random()-0.5)*actualFH*0.8, Math.sin(a)*glassRadius);
@@ -639,46 +564,44 @@ function buildCinematicFloors(){
 }
 
 function buildAntenna(){
-    const gap = 0.05;
-    const topY=BASE_Y + gap + FLOORS.length*FH; 
+    const topY=BASE_Y+FLOORS.length*FH;
     const rTop = FW * Math.pow(0.92, FLOORS.length);
     
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(rTop*0.2, rTop*0.6, 0.3, 16), new THREE.MeshStandardMaterial({color:0x222222, metalness:0.8, roughness:0.5}));
-    base.position.set(0, topY + 0.15, 0); base.name='antBase'; towerGroup.add(base);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(rTop*0.2, rTop*0.6, 0.3, 16), new THREE.MeshStandardMaterial({color:0x222222, metalness:0.8, roughness:0.5, transparent:true, opacity:0}));
+    base.position.set(0, topY+0.15, 0); base.name='antBase'; base.castShadow = true; scene.add(base);
 
-    const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.02, 2.0, 8),new THREE.MeshStandardMaterial({color:0x88ccff, metalness:1, roughness:0.2}));
-    rod.position.set(0,topY + 1.1,0); rod.name='antRod'; towerGroup.add(rod);
+    const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.02, 2.0, 8),new THREE.MeshStandardMaterial({color:0x88ccff, metalness:1, roughness:0.2, transparent:true,opacity:0}));
+    rod.position.set(0,topY+1.1,0); rod.name='antRod'; rod.castShadow = true; scene.add(rod);
 
-    const tip=new THREE.Mesh(new THREE.OctahedronGeometry(0.08),new THREE.MeshBasicMaterial({color:0x00cfff, wireframe:true}));
-    tip.position.set(0,topY + 2.2,0); tip.name='antTip'; towerGroup.add(tip);
+    const tip=new THREE.Mesh(new THREE.OctahedronGeometry(0.08),new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0, wireframe:true}));
+    tip.position.set(0,topY+2.2,0); tip.name='antTip'; scene.add(tip);
 
-    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.3,16,16),new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0.6, blending:THREE.AdditiveBlending, depthWrite:false}));
-    glow.position.copy(tip.position); glow.name='antGlow'; towerGroup.add(glow);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.3,16,16),new THREE.MeshBasicMaterial({color:0x00cfff,transparent:true,opacity:0, blending:THREE.AdditiveBlending, depthWrite:false}));
+    glow.position.copy(tip.position); glow.name='antGlow'; scene.add(glow);
 }
 
 // ════════════════════════════════════════════════════════════
-// BUILD ANIMÁCIÓ (Közös)
+// BUILD ANIMÁCIÓ
 // ════════════════════════════════════════════════════════════
 function startBuild(){
     buildPhase='building';
-    document.getElementById('build-ui').classList.add('building');
     const perFloor = (BUILD_S-3)/FLOORS.length;
-    setProgress(2,'KÖRNYEZETI MAPPING...');
-    setTimeout(()=> buildFloor(0,perFloor), 1000);
+    setProgress(2,'ALAP LERAKÁSA...');
+    setTimeout(()=> buildFloor(0,perFloor), 2200);
 }
 
 function buildFloor(idx, perFloor){
     if(idx>=FLOORS.length){
         setProgress(93,'ANTENNA TELEPÍTÉSE...');
+        animAntenna();
         setTimeout(()=>{
             buildPhase='done';
             setProgress(100,'TORONY KÉSZ');
             setTimeout(()=>{
-                document.getElementById('build-ui').classList.remove('building');
-                document.getElementById('tap-hint').textContent = "// KOPPINTS EGY EMELETRE //";
-                document.getElementById('tap-hint').classList.add('show');
-            },1500);
-        }, 1500);
+                document.getElementById('build-ui').classList.add('gone');
+                setTimeout(()=>document.getElementById('tap-hint').classList.add('show'),600);
+            },1000);
+        }, 2200);
         return;
     }
 
@@ -689,22 +612,23 @@ function buildFloor(idx, perFloor){
 
 function setProgress(pct,txt){
     document.getElementById('bp-fill').style.width=pct+'%';
+    document.getElementById('bp-dot').style.right=(100-pct)+'%';
     document.getElementById('bp-text').textContent=txt;
 }
 
 function animFloorIn(idx,cb){
     const fm=floorGroups[idx];
     const targetY=BASE_Y+(idx+0.5)*FH;
-    fm.group.position.y=targetY+2.0; 
+    fm.group.position.y=targetY+4.0; 
     fm.group.scale.set(1,0.01,1);
     fm.built=true;
 
-    const dur=800, t0=Date.now();
+    const dur=1000, t0=Date.now();
     function step(){
         const t=Math.min((Date.now()-t0)/dur,1);
         const e=easeOutBack(t); 
         
-        fm.group.position.y=(targetY+2.0)*(1-e)+targetY*e;
+        fm.group.position.y=(targetY+4.0)*(1-e)+targetY*e;
         fm.group.scale.y=Math.max(0.01, easeOutCubic(t));
         
         if(t<1) requestAnimationFrame(step);
@@ -713,11 +637,29 @@ function animFloorIn(idx,cb){
     step();
 }
 
+function animAntenna(){
+    const b=scene.getObjectByName('antBase');
+    const r=scene.getObjectByName('antRod');
+    const t=scene.getObjectByName('antTip');
+    const g=scene.getObjectByName('antGlow');
+    const dur=1600, t0=Date.now();
+    function step(){
+        const time=Math.min((Date.now()-t0)/dur,1);
+        const e=easeOutCubic(time);
+        if(b) b.material.opacity=e;
+        if(r) r.material.opacity=e;
+        if(t) t.material.opacity=e;
+        if(g) g.material.opacity=e*0.4;
+        if(time<1) requestAnimationFrame(step);
+    }
+    step();
+}
+
 const easeOutCubic=t=>1-Math.pow(1-t,3);
 const easeOutBack=t=>{ const c1=1.70158; const c3=c1+1; return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2); }
 
 // ════════════════════════════════════════════════════════════
-// PANEL NAVIGÁCIÓ (UI)
+// PANEL NAVIGÁCIÓ
 // ════════════════════════════════════════════════════════════
 function buildFloorNav(){
     const nav=document.getElementById('floor-nav');
@@ -767,6 +709,7 @@ function fillPanel(idx){
     const d=FLOORS[idx];
     document.documentElement.style.setProperty('--p',d.col);
     document.documentElement.style.setProperty('--pg',d.col+'77');
+    document.documentElement.style.setProperty('--pb',hexToRgba(d.col,0.15));
 
     document.getElementById('pp-badge').textContent=`0${d.n}`;
     document.getElementById('pp-name').textContent=d.name;
@@ -781,99 +724,148 @@ function fillPanel(idx){
     d.stats.forEach((s,i)=>{ document.getElementById(`sv${i+1}`).textContent=s[0]; document.getElementById(`sl${i+1}`).textContent=s[1]; });
 }
 
+function hexToRgba(hex,a){
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+}
+
 // ════════════════════════════════════════════════════════════
-// RENDER LOOP (Minden képkocka frissítése)
+// ANIMÁCIÓ LOOP
 // ════════════════════════════════════════════════════════════
-function renderLoop(timestamp, frame){
-    const t = timestamp * 0.001;
+function animate(){
+    requestAnimationFrame(animate);
+    const t=Date.now()*.001;
 
-    // --- KIZÁRÓLAG WEBXR MÓDBAN (HIT TEST) ---
-    if (isWebXRMode && frame && buildPhase === 'scanning') {
-        const session = renderer.xr.getSession();
-        const referenceSpace = renderer.xr.getReferenceSpace();
-
-        if (!hitTestSourceRequested) {
-            session.requestReferenceSpace('viewer').then((refSpace) => {
-                session.requestHitTestSource({ space: refSpace }).then((source) => { hitTestSource = source; });
-            });
-            session.addEventListener('end', () => { hitTestSourceRequested = false; hitTestSource = null; });
-            hitTestSourceRequested = true;
-        }
-
-        if (hitTestSource) {
-            const hitTestResults = frame.getHitTestResults(hitTestSource);
-            if (hitTestResults.length > 0) {
-                const hit = hitTestResults[0];
-                reticle.visible = true;
-                reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-                
-                const hint = document.getElementById('tap-hint');
-                if(hint.textContent !== "// KOPPINTS A LERAKÁSHOZ //") {
-                    hint.textContent = "// KOPPINTS A LERAKÁSHOZ //";
-                    hint.style.borderColor = "#00ffaa"; hint.style.color = "#00ffaa";
-                }
-            } else {
-                reticle.visible = false;
-            }
-        }
-    }
-
-    // --- KIZÁRÓLAG FALLBACK MÓDBAN (KAMERA MOZGATÁSA GIROSZKÓPPAL) ---
-    if (!isWebXRMode) {
-        cRotX += (tRotX - cRotX) * 0.06; 
-        cRotY += (tRotY - cRotY) * 0.06;
-        const R = 3.5; // Távolság a modelltől a Fallback nézetben
-        // Mozgatjuk a kamerát a világ körül
-        camera.position.set(Math.sin(cRotY) * R, 0.5 + cRotX * R, Math.cos(cRotY) * R);
-        camera.lookAt(0, 0, -2.5); // A világ közepe felé nézünk
-    }
-
-    // --- KÖZÖS ANIMÁCIÓK ---
+    // Környezet adaptáció frissítése
+    if(t - lastSample > 0.2) { lastSample = t; analyzeBackground(); }
     
-    // Névjegy Mentése Animáció (Data Burst)
+    envBright += (targetBright - envBright) * 0.05;
+    currentEnvColor.lerp(targetEnvColor, 0.05);
+
+    if(!panelOpen) {
+        const hex = '#' + currentEnvColor.getHexString();
+        document.documentElement.style.setProperty('--p', hex);
+        document.documentElement.style.setProperty('--pg', hex + '77');
+        document.documentElement.style.setProperty('--pb', hexToRgba(hex, 0.15));
+    }
+
+    if(fillLight) fillLight.color.copy(currentEnvColor);
+    if(scene.fog) scene.fog.color.copy(currentEnvColor).multiplyScalar(0.06);
+
+    const invBright = Math.max(0.1, 1.0 - envBright);
+    const glowFactor = 0.01 + (invBright * 0.15); 
+    const glassOp = 0.6 + (envBright * 0.35); 
+
+    const isDarkEnvironment = envBright < 0.45;
+    const targetLightOpacity = isDarkEnvironment ? 0.85 : 0.0;
+    
     let burstRotation = 0, burstScale = 1.0, burstGlow = 0;
     if (pulseAnim > 0) {
-        pulseAnim -= 0.02; if (pulseAnim < 0) pulseAnim = 0;
+        pulseAnim -= 0.015; if (pulseAnim < 0) pulseAnim = 0;
         burstRotation = pulseAnim * 2.0; 
-        burstScale = 1.0 + (pulseAnim * 0.1); 
-        burstGlow = pulseAnim * 3.0; 
+        burstScale = 1.0 + (pulseAnim * 0.15); 
+        burstGlow = pulseAnim * 4.0; 
     }
 
-    const r1=worldGroup.getObjectByName('r1'); if(r1) r1.rotation.z = t*0.2; 
-    const r2=worldGroup.getObjectByName('r2'); if(r2) r2.rotation.z = -t*0.3; 
-    const ag=towerGroup.getObjectByName('antGlow'); if(ag) ag.material.opacity=0.4+Math.sin(t*3.5)*0.2;
-    const at=towerGroup.getObjectByName('antTip');  if(at) { at.rotation.y = t; at.rotation.x = t*0.5; }
+    // Kamera giroszkópos forgatása, hatalmas torony fókusszal
+    cRotX+=(tRotX-cRotX)*0.06; cRotY+=(tRotY-cRotY)*0.06;
+    const R=8.5; 
+    camera.position.set(Math.sin(cRotY)*R, 0.5+cRotX*R*0.5, Math.cos(cRotY)*R);
+    camera.lookAt(0, 1.2, 0);
+
+    const r1=scene.getObjectByName('r1'); if(r1) { r1.rotation.z = t*0.2; r1.material.color.copy(currentEnvColor); }
+    const r2=scene.getObjectByName('r2'); if(r2) { r2.rotation.z = -t*0.3; r2.material.color.copy(currentEnvColor); }
+
+    const ag=scene.getObjectByName('antGlow'); if(ag) ag.material.opacity=0.2+Math.sin(t*3.5)*0.2;
+    const at=scene.getObjectByName('antTip');  if(at) { at.rotation.y = t; at.rotation.x = t*0.5; }
 
     floorGroups.forEach((fm,i)=>{
         if(!fm.built) return;
         const baseY=BASE_Y+(i+0.5)*FH;
         const isSel=(i===selectedFloor);
 
+        fm.glassMat.opacity = THREE.MathUtils.lerp(fm.glassMat.opacity, isSel ? 0.9 : glassOp, 0.1);
+
         if(isSel){
-            fm.glassMat.emissiveIntensity = 2.0 + Math.sin(t*5)*0.5 + burstGlow; 
-            fm.exScale = THREE.MathUtils.lerp(fm.exScale, 1.12, 0.1); 
-            fm.exY = THREE.MathUtils.lerp(fm.exY, 0.15, 0.1); 
+            fm.glassMat.emissiveIntensity = (glowFactor * 3.5) + Math.sin(t*5)*0.15 + burstGlow; 
+            fm.exScale = THREE.MathUtils.lerp(fm.exScale, 1.15, 0.06); 
+            fm.exY = THREE.MathUtils.lerp(fm.exY, 0.25, 0.06); 
         } else {
-            fm.glassMat.emissiveIntensity = 0.5 + Math.sin(t*1.5+i)*0.1 + burstGlow; 
-            fm.exScale = THREE.MathUtils.lerp(fm.exScale, 1.0, 0.1);
-            fm.exY = THREE.MathUtils.lerp(fm.exY, 0.0, 0.1);
+            fm.glassMat.emissiveIntensity = glowFactor + Math.sin(t*1.5+i)*0.015 + burstGlow;
+            fm.exScale = THREE.MathUtils.lerp(fm.exScale, 1.0, 0.08);
+            fm.exY = THREE.MathUtils.lerp(fm.exY, 0.0, 0.08);
         }
         
         fm.group.scale.set(fm.exScale, 1, fm.exScale);
         fm.group.position.y = baseY + fm.exY;
         
-        fm.lightGroup.children.forEach((light, lIdx) => {
-            light.material.opacity = isSel ? 1.0 : (0.6 + Math.sin(t * (2+lIdx%3) + lIdx) * 0.4);
+        fm.lightGroup.children.forEach((light) => {
+            const ud = light.userData;
+            ud.currentOpacity += (targetLightOpacity - ud.currentOpacity) * 0.05;
+            let flicker = 0;
+            if(ud.currentOpacity > 0.1) flicker = Math.sin(t * ud.speed * 3 + ud.phase) * 0.25;
+            light.material.opacity = isSel ? 1.0 : Math.max(0, ud.currentOpacity + flicker);
         });
     });
 
     if(towerGroup) {
-        towerGroup.position.y = Math.sin(t*0.5)*0.02 + (pulseAnim * 0.05); 
+        towerGroup.position.y = Math.sin(t*0.5)*0.05 + (pulseAnim * 0.1); 
         towerGroup.rotation.y = burstRotation; 
         towerGroup.scale.set(burstScale, burstScale, burstScale); 
     }
 
-    renderer.render(scene, camera);
+    renderer.render(scene,camera);
+}
+
+// ════════════════════════════════════════════════════════════
+// TOUCH + RAYCASTER + GYRO
+// ════════════════════════════════════════════════════════════
+function onTap(x,y){
+    if(buildPhase!=='done' || panelOpen) return;
+    mouse.x=(x/window.innerWidth)*2-1;
+    mouse.y=-(y/window.innerHeight)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    const meshes=floorGroups.filter(f=>f.built).map(f=>f.glass);
+    const hits=raycaster.intersectObjects(meshes,false);
+    if(hits.length>0){
+        const fi=hits[0].object.userData.fi;
+        if(fi!==undefined) selectFloor(fi);
+    }
+}
+
+const canvasEl = document.getElementById('ar-canvas');
+canvasEl.addEventListener('touchstart',e=>{
+    touchMoved=false;
+    if(e.touches.length===1){ touchX=e.touches[0].clientX; touchY=e.touches[0].clientY; }
+},{passive:true});
+
+canvasEl.addEventListener('touchmove',e=>{
+    touchMoved=true;
+    if(e.touches.length===1&&!gyroAvail){
+        tRotY+=(e.touches[0].clientX-touchX)*.005;
+        tRotX+=(-e.touches[0].clientY+touchY)*.004;
+        touchX=e.touches[0].clientX; touchY=e.touches[0].clientY;
+    }
+},{passive:true});
+
+canvasEl.addEventListener('touchend',e=>{
+    if(!touchMoved&&e.changedTouches.length===1) onTap(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+},{passive:true});
+
+canvasEl.addEventListener('click',e=>{ onTap(e.clientX,e.clientY); });
+
+function setupGyro(){
+    if(typeof DeviceOrientationEvent==='undefined') return;
+    const en=()=>{
+        window.addEventListener('deviceorientation',e=>{
+            if(e.beta===null) return; gyroAvail=true;
+            tRotX=THREE.MathUtils.clamp((e.beta-72)*.012,-.8,.8);
+            tRotY=THREE.MathUtils.clamp(e.gamma*.02,-Math.PI,Math.PI);
+        });
+    };
+    if(typeof DeviceOrientationEvent.requestPermission==='function')
+        DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted') en(); }).catch(()=>{});
+    else en();
 }
 </script>
 </body>
