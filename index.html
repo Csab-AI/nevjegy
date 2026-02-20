@@ -228,10 +228,17 @@ let sampleCanvas, sampleCtx, lastSample=0;
 // ════════════════════════════════════════════════════════
 async function startAR() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} },
-            audio:false
-        });
+        // iOS Safari: egyszerű fallback lánc
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        } catch(e1) {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+            } catch(e2) {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            }
+        }
         const video = document.getElementById('camera-bg');
         video.srcObject = stream;
 
